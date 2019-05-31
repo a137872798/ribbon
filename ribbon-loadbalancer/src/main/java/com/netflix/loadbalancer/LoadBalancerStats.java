@@ -296,6 +296,7 @@ public class LoadBalancerStats implements IClientConfigAware {
         }
         zone = zone.toLowerCase();
         List<? extends Server> currentList = upServerListZoneMap.get(zone);
+        //区域快照对象是由 一个ServerList 生成的
         return getZoneSnapshot(currentList);        
     }
     
@@ -304,12 +305,16 @@ public class LoadBalancerStats implements IClientConfigAware {
      * going over the list again for a different stat.
      * 
      * @param servers
+     *      获取一组服务信息的快照
      */
     public ZoneSnapshot getZoneSnapshot(List<? extends Server> servers) {
         if (servers == null || servers.size() == 0) {
+            //返回空对象
             return new ZoneSnapshot();
         }
+        //获取实例长度
         int instanceCount = servers.size();
+        //活跃连接数
         int activeConnectionsCount = 0;
         int activeConnectionsCountOnAvailableServer = 0;
         int circuitBreakerTrippedCount = 0;

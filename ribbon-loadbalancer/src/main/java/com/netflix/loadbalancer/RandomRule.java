@@ -27,7 +27,7 @@ import java.util.concurrent.ThreadLocalRandom;
  * servers.
  * 
  * @author stonse
- * 
+ *      随机规则
  */
 public class RandomRule extends AbstractLoadBalancerRule {
 
@@ -45,9 +45,11 @@ public class RandomRule extends AbstractLoadBalancerRule {
             if (Thread.interrupted()) {
                 return null;
             }
+            //获取 所有可用的服务 和 全部服务
             List<Server> upList = lb.getReachableServers();
             List<Server> allList = lb.getAllServers();
 
+            //服务数量
             int serverCount = allList.size();
             if (serverCount == 0) {
                 /*
@@ -57,6 +59,7 @@ public class RandomRule extends AbstractLoadBalancerRule {
                 return null;
             }
 
+            //随机获取一个 下标
             int index = chooseRandomInt(serverCount);
             server = upList.get(index);
 

@@ -98,12 +98,16 @@ public class CompositePredicate extends AbstractServerPredicate {
 
     /**
      * Get the filtered servers from primary predicate, and if the number of the filtered servers
-     * are not enough, trying the fallback predicates  
+     * are not enough, trying the fallback predicates
+     *      获得过滤后的服务对象
      */
     @Override
     public List<Server> getEligibleServers(List<Server> servers, Object loadBalancerKey) {
+        //获得 过滤后的对象
         List<Server> result = super.getEligibleServers(servers, loadBalancerKey);
+        //获取 后续的 谓语对象
         Iterator<AbstractServerPredicate> i = fallbacks.iterator();
+        //当 处理过的 谓语对象小于指定值 或者 还存在后续的谓语对象 就进行处理
         while (!(result.size() >= minimalFilteredServers && result.size() > (int) (servers.size() * minimalFilteredPercentage))
                 && i.hasNext()) {
             AbstractServerPredicate predicate = i.next();

@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory;
  * i.e. doesnt do anything "loadbalancer like"
  * 
  * @author stonse
- *
+ *      noop均衡负载对象 就是返回null 或者空容器
  */
 public class NoOpLoadBalancer extends AbstractLoadBalancer {
 

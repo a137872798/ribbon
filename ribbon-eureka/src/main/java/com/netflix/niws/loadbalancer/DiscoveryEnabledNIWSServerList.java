@@ -42,13 +42,19 @@ import javax.inject.Provider;
  * {@link DynamicServerListLoadBalancer} to get server list dynamically.
  *
  * @author stonse
- *
+ *      具备自主更新服务的服务列表对象
  */
 public class DiscoveryEnabledNIWSServerList extends AbstractServerList<DiscoveryEnabledServer>{
 
     private static final Logger logger = LoggerFactory.getLogger(DiscoveryEnabledNIWSServerList.class);
 
+    /**
+     * 对应的 客户端名
+     */
     String clientName;
+    /**
+     * vip 地址
+     */
     String vipAddresses;
     boolean isSecure = false;
 
@@ -138,16 +144,28 @@ public class DiscoveryEnabledNIWSServerList extends AbstractServerList<Discovery
         }
     }
 
+    /**
+     * 获取 刚刚初始化的服务对象
+     * @return
+     */
     @Override
     public List<DiscoveryEnabledServer> getInitialListOfServers(){
         return obtainServersViaDiscovery();
     }
 
+    /**
+     * 获取 刚更新的服务对象
+     * @return
+     */
     @Override
     public List<DiscoveryEnabledServer> getUpdatedListOfServers(){
         return obtainServersViaDiscovery();
     }
 
+    /**
+     * 获取刚 初始化/更新 的服务对象  如果不存在 vipAddress 会返回空列表
+     * @return
+     */
     private List<DiscoveryEnabledServer> obtainServersViaDiscovery() {
         List<DiscoveryEnabledServer> serverList = new ArrayList<DiscoveryEnabledServer>();
 
@@ -156,14 +174,19 @@ public class DiscoveryEnabledNIWSServerList extends AbstractServerList<Discovery
             return new ArrayList<DiscoveryEnabledServer>();
         }
 
+        //从提供者中获取eurekaClient 对象 provider 是 javax 的某种规范 类似与 spring 的 beanInject
         EurekaClient eurekaClient = eurekaClientProvider.get();
+        //如果vip 地址不为空
         if (vipAddresses!=null){
             for (String vipAddress : vipAddresses.split(",")) {
                 // if targetRegion is null, it will be interpreted as the same region of client
+                // 通过eurekaClient 去获取 eurekaServer 上的 服务实例对象
                 List<InstanceInfo> listOfInstanceInfo = eurekaClient.getInstancesByVipAddress(vipAddress, isSecure, targetRegion);
                 for (InstanceInfo ii : listOfInstanceInfo) {
+                    //必须确保 服务实例是启动的
                     if (ii.getStatus().equals(InstanceStatus.UP)) {
 
+                        //如果需要重写 port 在下面会重新构建一个 instanceInfo 对象
                         if(shouldUseOverridePort){
                             if(logger.isDebugEnabled()){
                                 logger.debug("Overriding port on client name: " + clientName + " to " + overridePort);
@@ -181,6 +204,7 @@ public class DiscoveryEnabledNIWSServerList extends AbstractServerList<Discovery
                             }
                         }
 
+                        //将 instanceInfo 对象还原成 server 对象并返回
                         DiscoveryEnabledServer des = createServer(ii, isSecure, shouldUseIpAddr);
                         serverList.add(des);
                     }

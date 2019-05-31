@@ -18,6 +18,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * (refactored and moved here from {@link com.netflix.loadbalancer.DynamicServerListLoadBalancer})
  *
  * @author David Liu
+ *      默认的自动更新服务列表的实现
  */
 public class PollingServerListUpdater implements ServerListUpdater {
 
@@ -27,6 +28,9 @@ public class PollingServerListUpdater implements ServerListUpdater {
     private static int LISTOFSERVERS_CACHE_REPEAT_INTERVAL = 30 * 1000; // msecs;
     private static int POOL_SIZE = 2;
 
+    /**
+     * 构建一个线程池对象
+     */
     private static class LazyHolder {
         static ScheduledExecutorService _serverListRefreshExecutor = null;
 
@@ -62,18 +66,27 @@ public class PollingServerListUpdater implements ServerListUpdater {
         this.refreshIntervalMs = refreshIntervalMs;
     }
 
+    /**
+     * 启动 服务列表更新 为什么要套2层锁
+     * @param updateAction
+     */
     @Override
     public synchronized void start(final UpdateAction updateAction) {
+        //CAS 保证只能启动一次
         if (isActive.compareAndSet(false, true)) {
             final Runnable wrapperRunnable = () ->  {
+                //生成一个 用于 执行定时任务的 runnable 对象
                 if (!isActive.get()) {
+                    //如果 定时结果没有关闭 就执行关闭
                     if (scheduledFuture != null) {
                         scheduledFuture.cancel(true);
                     }
                     return;
                 }
                 try {
+                    //执行更新任务
                     updateAction.doUpdate();
+                    //更新 时间戳
                     lastUpdated = System.currentTimeMillis();
                 } catch (Exception e) {
                     logger.warn("Failed one update cycle", e);
@@ -91,6 +104,9 @@ public class PollingServerListUpdater implements ServerListUpdater {
         }
     }
 
+    /**
+     * stop 就是关闭 future
+     */
     @Override
     public synchronized void stop() {
         if (isActive.compareAndSet(true, false)) {

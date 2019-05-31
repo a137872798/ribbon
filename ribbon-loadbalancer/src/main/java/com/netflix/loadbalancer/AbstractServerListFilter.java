@@ -24,9 +24,13 @@ package com.netflix.loadbalancer;
  * @author stonse
  *
  * @param <T>
+ *          ServerList过滤器骨架类
  */
 public abstract class AbstractServerListFilter<T extends Server> implements ServerListFilter<T> {
 
+    /**
+     * 均衡负载的 统计类 可以获取统计信息
+     */
     private volatile LoadBalancerStats stats;
     
     public void setLoadBalancerStats(LoadBalancerStats stats) {

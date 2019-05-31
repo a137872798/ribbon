@@ -51,6 +51,7 @@ For each request, the steps above will be repeated. That is to say, each zone re
  * @author awang
  *
  * @param <T>
+ *          区域感知的均衡负载器 是拓展于 动态服务均衡负载对象
  */
 public class ZoneAwareLoadBalancer<T extends Server> extends DynamicServerListLoadBalancer<T> {
 
@@ -117,35 +118,51 @@ public class ZoneAwareLoadBalancer<T extends Server> extends DynamicServerListLo
         this.triggeringBlackoutPercentage = clientConfig.getGlobalProperty(AVOID_ZONE_WITH_BLACKOUT_PERCENTAGE.format(name));
     }
 
+    /**
+     * 该方法 重写了 设置 zone 与 所属 server map 的方法
+     * @param zoneServersMap
+     */
     @Override
     protected void setServerListForZones(Map<String, List<Server>> zoneServersMap) {
+        //更新统计信息
         super.setServerListForZones(zoneServersMap);
+        //balancers 以zone 为key BaseLoadBalance 为value 的map
         if (balancers == null) {
             balancers = new ConcurrentHashMap<String, BaseLoadBalancer>();
         }
         for (Map.Entry<String, List<Server>> entry: zoneServersMap.entrySet()) {
         	String zone = entry.getKey().toLowerCase();
+        	//更新负载对象维护的 服务列表
             getLoadBalancer(zone).setServersList(entry.getValue());
         }
         // check if there is any zone that no longer has a server
         // and set the list to empty so that the zone related metrics does not
         // contain stale data
+        // 填充 baseLoadBalancer 对象
         for (Map.Entry<String, BaseLoadBalancer> existingLBEntry: balancers.entrySet()) {
             if (!zoneServersMap.keySet().contains(existingLBEntry.getKey())) {
                 existingLBEntry.getValue().setServersList(Collections.emptyList());
             }
         }
-    }    
-        
+    }
+
+    /**
+     * 该方法 覆盖父类方法 能够按照zone 挑选合适 的 server
+     * @param key
+     * @return
+     */
     @Override
     public Server chooseServer(Object key) {
+        //如果 可用区域 只有一个 就不需要 通过区域进行筛选 直接调用父类的方法
         if (!enabled.getOrDefault() || getLoadBalancerStats().getAvailableZones().size() <= 1) {
             logger.debug("Zone aware logic disabled or there is only one zone");
             return super.chooseServer(key);
         }
         Server server = null;
         try {
+            //获取均衡负载的统计对象
             LoadBalancerStats lbStats = getLoadBalancerStats();
+            //根据统计对象 获取合适的快照
             Map<String, ZoneSnapshot> zoneSnapshot = ZoneAvoidanceRule.createSnapshot(lbStats);
             logger.debug("Zone snapshots: {}", zoneSnapshot);
             Set<String> availableZones = ZoneAvoidanceRule.getAvailableZones(zoneSnapshot, triggeringLoad.getOrDefault(), triggeringBlackoutPercentage.getOrDefault());
@@ -168,13 +185,19 @@ public class ZoneAwareLoadBalancer<T extends Server> extends DynamicServerListLo
             return super.chooseServer(key);
         }
     }
-     
+
+    /**
+     * 通过 zone 从balancers 中获取负载对象
+     * @param zone
+     * @return
+     */
     @VisibleForTesting
     BaseLoadBalancer getLoadBalancer(String zone) {
         zone = zone.toLowerCase();
         BaseLoadBalancer loadBalancer = balancers.get(zone);
         if (loadBalancer == null) {
         	// We need to create rule object for load balancer for each zone
+            // 没有对象的情况下 尝试使用默认rule 生成一个  并返回
         	IRule rule = cloneRule(this.getRule());
             loadBalancer = new BaseLoadBalancer(this.getName() + "_" + zone, rule, this.getLoadBalancerStats());
             BaseLoadBalancer prev = balancers.putIfAbsent(zone, loadBalancer);

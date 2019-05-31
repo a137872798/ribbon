@@ -33,7 +33,7 @@ import java.util.Set;
  * The logic to determine the worst zone is described in class {@link ZoneAwareLoadBalancer}.  
  * 
  * @author awang
- *
+ *      根据zone 进行 过滤的谓语对象
  */
 public class ZoneAvoidancePredicate extends AbstractServerPredicate {
 
@@ -76,17 +76,25 @@ public class ZoneAvoidancePredicate extends AbstractServerPredicate {
         }
     }
 
+    /**
+     * 作用谓语条件
+     * @param input
+     * @return
+     */
     @Override
     public boolean apply(@Nullable PredicateKey input) {
+        //如果 关闭 该谓语 则不进行过滤
         if (!enabled.getOrDefault()) {
             return true;
         }
+        //获取 服务对应的zone
         String serverZone = input.getServer().getZone();
         if (serverZone == null) {
             // there is no zone information from the server, we do not want to filter
             // out this server
             return true;
         }
+        //获取统计对象
         LoadBalancerStats lbStats = getLBStats();
         if (lbStats == null) {
             // no stats available, do not filter
@@ -96,15 +104,19 @@ public class ZoneAvoidancePredicate extends AbstractServerPredicate {
             // only one zone is available, do not filter
             return true;
         }
+        //获取 快照容器 key 对应地区
         Map<String, ZoneSnapshot> zoneSnapshot = ZoneAvoidanceRule.createSnapshot(lbStats);
+        //针对 不存在快照的 zone  不选择过滤
         if (!zoneSnapshot.keySet().contains(serverZone)) {
             // The server zone is unknown to the load balancer, do not filter it out 
             return true;
         }
         logger.debug("Zone snapshots: {}", zoneSnapshot);
+        //获取所有可用zone
         Set<String> availableZones = ZoneAvoidanceRule.getAvailableZones(zoneSnapshot, triggeringLoad.getOrDefault(), triggeringBlackoutPercentage.getOrDefault());
         logger.debug("Available zones: {}", availableZones);
         if (availableZones != null) {
+            //过滤不可用的zone
             return availableZones.contains(input.getServer().getZone());
         } else {
             return false;

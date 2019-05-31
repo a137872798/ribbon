@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * done on a separate scheduler as the notification is delivered on an eurekaClient thread.
  *
  * @author David Liu
+ *      基于eureka 的事件监听机制驱动服务列表更新操作
  */
 public class EurekaNotificationServerListUpdater implements ServerListUpdater {
 

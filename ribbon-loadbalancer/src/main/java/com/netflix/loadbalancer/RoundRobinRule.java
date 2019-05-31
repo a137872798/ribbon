@@ -30,9 +30,13 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author stonse
  * @author Nikos Michalakis <nikos@netflix.com>
  *
+ *      默认的均衡负载规则对象
  */
 public class RoundRobinRule extends AbstractLoadBalancerRule {
 
+    /**
+     * 应该是用轮询的方式
+     */
     private AtomicInteger nextServerCyclicCounter;
     private static final boolean AVAILABLE_ONLY_SERVERS = true;
     private static final boolean ALL_SERVERS = false;
@@ -48,6 +52,12 @@ public class RoundRobinRule extends AbstractLoadBalancerRule {
         setLoadBalancer(lb);
     }
 
+    /**
+     * 开始 从 候选服务列表中 定位某个服务对象
+     * @param lb
+     * @param key
+     * @return
+     */
     public Server choose(ILoadBalancer lb, Object key) {
         if (lb == null) {
             log.warn("no load balancer");
@@ -57,7 +67,9 @@ public class RoundRobinRule extends AbstractLoadBalancerRule {
         Server server = null;
         int count = 0;
         while (server == null && count++ < 10) {
+            //获取 所有可用的 服务对象
             List<Server> reachableServers = lb.getReachableServers();
+            //获取 全部服务对象
             List<Server> allServers = lb.getAllServers();
             int upCount = reachableServers.size();
             int serverCount = allServers.size();
@@ -67,6 +79,7 @@ public class RoundRobinRule extends AbstractLoadBalancerRule {
                 return null;
             }
 
+            //获取 下标 猜测这里是使用了 取余算法
             int nextServerIndex = incrementAndGetModulo(serverCount);
             server = allServers.get(nextServerIndex);
 
@@ -96,6 +109,7 @@ public class RoundRobinRule extends AbstractLoadBalancerRule {
      *
      * @param modulo The modulo to bound the value of the counter.
      * @return The next value.
+     *      自旋 + CAS 计算下标 之后就可以使用取余计算
      */
     private int incrementAndGetModulo(int modulo) {
         for (;;) {

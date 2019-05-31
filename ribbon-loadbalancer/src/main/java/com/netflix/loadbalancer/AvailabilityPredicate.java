@@ -30,7 +30,7 @@ import javax.annotation.Nullable;
  * with too many concurrent connections from this client.
  * 
  * @author awang
- *
+ *      通过可用性 进行过滤
  */
 public class AvailabilityPredicate extends  AbstractServerPredicate {
 
@@ -49,6 +49,7 @@ public class AvailabilityPredicate extends  AbstractServerPredicate {
 
     public AvailabilityPredicate(IRule rule, IClientConfig clientConfig) {
         super(rule);
+        //初始化 动态属性
         initDynamicProperty(clientConfig);
     }
 
@@ -61,6 +62,10 @@ public class AvailabilityPredicate extends  AbstractServerPredicate {
         super(rule);
     }
 
+    /**
+     * 初始化 动态属性
+     * @param clientConfig
+     */
     private void initDynamicProperty(IClientConfig clientConfig) {
         if (clientConfig != null) {
             this.circuitBreakerFiltering = clientConfig.getGlobalProperty(FILTER_CIRCUIT_TRIPPED);
@@ -69,6 +74,10 @@ public class AvailabilityPredicate extends  AbstractServerPredicate {
         }
     }
 
+    /**
+     * 获取 连接数限制
+     * @return
+     */
     private int getActiveConnectionsLimit() {
         Integer limit = activeConnectionsLimit.getOrDefault();
         if (limit == -1) {
@@ -80,16 +89,23 @@ public class AvailabilityPredicate extends  AbstractServerPredicate {
         return limit;
     }
 
+    /**
+     * 不存在 统计信息的情况下 回避该层过滤
+     * @param input
+     * @return
+     */
     @Override
     public boolean apply(@Nullable PredicateKey input) {
         LoadBalancerStats stats = getLBStats();
         if (stats == null) {
             return true;
         }
+        //判断是否 应该过滤掉该服务
         return !shouldSkipServer(stats.getSingleServerStat(input.getServer()));
     }
     
     private boolean shouldSkipServer(ServerStats stats) {
+        //请求次数大于限定值 获取 触发过断路
         if ((circuitBreakerFiltering.getOrDefault() && stats.isCircuitBreakerTripped())
                 || stats.getActiveRequestsCount() >= getActiveConnectionsLimit()) {
             return true;

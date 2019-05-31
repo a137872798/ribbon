@@ -22,7 +22,7 @@ package com.netflix.client.config;
  * for the commonly defined client configuration keys.
  * 
  * @author awang
- *
+ *		client 对应的 配置信息对象
  */
 public interface IClientConfigKey<T> {
 

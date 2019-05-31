@@ -24,10 +24,13 @@ import com.netflix.client.config.IClientConfig;
  * loadbalancer package
  * 
  * @author stonse
- * 
+ *      根据客户端配置的规则对象
  */
 public class ClientConfigEnabledRoundRobinRule extends AbstractLoadBalancerRule {
 
+    /**
+     * 内部维护一个轮询规则对象
+     */
     RoundRobinRule roundRobinRule = new RoundRobinRule();
 
     @Override

@@ -54,7 +54,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * and an "up" server list and use them depending on what the caller asks for.
  * 
  * @author stonse
- * 
+ *
+ *      均衡负载 的 实现基类
  */
 public class BaseLoadBalancer extends AbstractLoadBalancer implements
         PrimeConnections.PrimeConnectionListener, IClientConfigAware {
@@ -66,12 +67,24 @@ public class BaseLoadBalancer extends AbstractLoadBalancer implements
     private static final String DEFAULT_NAME = "default";
     private static final String PREFIX = "LoadBalancer_";
 
+    /**
+     * 默认的均衡负载规则对象
+     */
     protected IRule rule = DEFAULT_RULE;
 
+    /**
+     * 检查实例策略 对象
+     */
     protected IPingStrategy pingStrategy = DEFAULT_PING_STRATEGY;
 
+    /**
+     * 用于检查服务实例是否正常的 对象
+     */
     protected IPing ping = null;
 
+    /**
+     * 该注解的含义是??? 应该是 对外开放端点 外部能直接通过RestFul 请求 获取当前可用的所有 服务实例 或者 包含不可用的全部实例
+     */
     @Monitor(name = PREFIX + "AllServerList", type = DataSourceType.INFORMATIONAL)
     protected volatile List<Server> allServerList = Collections
             .synchronizedList(new ArrayList<Server>());
@@ -91,6 +104,9 @@ public class BaseLoadBalancer extends AbstractLoadBalancer implements
 
     protected AtomicBoolean pingInProgress = new AtomicBoolean(false);
 
+    /**
+     * 用于统计均衡负载的 统计对象
+     */
     protected LoadBalancerStats lbStats;
 
     private volatile Counter counter = Monitors.newCounter("LoadBalancer_ChooseServer");
@@ -119,6 +135,7 @@ public class BaseLoadBalancer extends AbstractLoadBalancer implements
         this.name = DEFAULT_NAME;
         this.ping = null;
         setRule(DEFAULT_RULE);
+        //该对象在初始化时 启动 ping 的定时任务
         setupPingTask();
         lbStats = new LoadBalancerStats(DEFAULT_NAME);
     }
@@ -263,13 +280,18 @@ public class BaseLoadBalancer extends AbstractLoadBalancer implements
         }
     }
 
+    /**
+     * 开始启动定时任务
+     */
     void setupPingTask() {
         if (canSkipPing()) {
             return;
         }
+        //如果之前存在定时任务 就先关闭之前的任务
         if (lbTimer != null) {
             lbTimer.cancel();
         }
+        //生成一个 可关闭的定时任务
         lbTimer = new ShutdownEnabledTimer("NFLoadBalancer-PingTimer-" + name,
                 true);
         lbTimer.schedule(new PingTask(), 0, pingIntervalSeconds * 1000);
@@ -429,12 +451,14 @@ public class BaseLoadBalancer extends AbstractLoadBalancer implements
      * Add a list of servers to the 'allServer' list; does not verify
      * uniqueness, so you could give a server a greater share by adding it more
      * than once
+     * 给均衡负载对象 增加一组新的服务
      */
     @Override
     public void addServers(List<Server> newServers) {
         if (newServers != null && newServers.size() > 0) {
             try {
                 ArrayList<Server> newList = new ArrayList<Server>();
+                //将 当前全部服务 和最新的服务 全部添加到 服务列表中
                 newList.addAll(allServerList);
                 newList.addAll(newServers);
                 setServersList(newList);
@@ -454,6 +478,7 @@ public class BaseLoadBalancer extends AbstractLoadBalancer implements
 
             try {
                 ArrayList<Server> newList = new ArrayList<Server>();
+                //这里保留了之前发现的服务
                 newList.addAll(allServerList);
 
                 for (Object server : newServers) {
@@ -476,6 +501,7 @@ public class BaseLoadBalancer extends AbstractLoadBalancer implements
     /**
      * Set the list of servers used as the server pool. This overrides existing
      * server list.
+     * 设置服务列表 这里应该是要进行去重操作吧  看来这里有很多地方调用 因为里面还有针对 List<String> 的情况
      */
     public void setServersList(List lsrv) {
         Lock writeLock = allServerLock.writeLock();
@@ -494,6 +520,7 @@ public class BaseLoadBalancer extends AbstractLoadBalancer implements
                     server = new Server((String) server);
                 }
 
+                //将全部服务 设置到 allServers中
                 if (server instanceof Server) {
                     logger.debug("LoadBalancer [{}]:  addServer [{}]", name, ((Server) server).getId());
                     allServers.add((Server) server);
@@ -505,9 +532,11 @@ public class BaseLoadBalancer extends AbstractLoadBalancer implements
 
             }
             boolean listChanged = false;
+            //代表增加了新的服务
             if (!allServerList.equals(allServers)) {
                 listChanged = true;
                 if (changeListeners != null && changeListeners.size() > 0) {
+                    //执行监听器
                    List<Server> oldList = ImmutableList.copyOf(allServerList);
                    List<Server> newList = ImmutableList.copyOf(allServers);                   
                    for (ServerListChangeListener l: changeListeners) {
@@ -519,6 +548,7 @@ public class BaseLoadBalancer extends AbstractLoadBalancer implements
                    }
                 }
             }
+            //当发现了 之前不存在的服务时标记readytoServe状态为false
             if (isEnablePrimingConnections()) {
                 for (Server server : allServers) {
                     if (!allServerList.contains(server)) {
@@ -526,6 +556,7 @@ public class BaseLoadBalancer extends AbstractLoadBalancer implements
                         newServers.add((Server) server);
                     }
                 }
+                //启动连接
                 if (primeConnections != null) {
                     primeConnections.primeConnectionsAsync(newServers, this);
                 }
@@ -655,6 +686,10 @@ public class BaseLoadBalancer extends AbstractLoadBalancer implements
             this.pingerStrategy = pingerStrategy;
         }
 
+        /**
+         * 开始 执行 ping 的任务
+         * @throws Exception
+         */
         public void runPinger() throws Exception {
             if (!pingInProgress.compareAndSet(false, true)) { 
                 return; // Ping in progress - nothing to do
@@ -672,12 +707,14 @@ public class BaseLoadBalancer extends AbstractLoadBalancer implements
                 /*
                  * The readLock should be free unless an addServer operation is
                  * going on...
+                 * 上锁 获取 最新的 list 保证当前读取的 数据是有效的 如果是基于拷贝数组实现 那么读到脏数据 之后的操作就没有意义了
                  */
                 allLock = allServerLock.readLock();
                 allLock.lock();
                 allServers = allServerList.toArray(new Server[allServerList.size()]);
                 allLock.unlock();
 
+                //针对 所有能获取到的服务 进行ping 操作
                 int numCandidates = allServers.length;
                 results = pingerStrategy.pingServers(ping, allServers);
 
@@ -685,27 +722,34 @@ public class BaseLoadBalancer extends AbstractLoadBalancer implements
                 final List<Server> changedServers = new ArrayList<Server>();
 
                 for (int i = 0; i < numCandidates; i++) {
+                    //获取到当前每个服务实例的状态
                     boolean isAlive = results[i];
+                    //获取实例对象
                     Server svr = allServers[i];
+                    //获取 旧的状态
                     boolean oldIsAlive = svr.isAlive();
 
                     svr.setAlive(isAlive);
 
                     if (oldIsAlive != isAlive) {
+                        //代表 这些服务的状态发生了改变
                         changedServers.add(svr);
                         logger.debug("LoadBalancer [{}]:  Server [{}] status changed to {}", 
                     		name, svr.getId(), (isAlive ? "ALIVE" : "DEAD"));
                     }
 
+                    //如果新状态是 true
                     if (isAlive) {
                         newUpList.add(svr);
                     }
                 }
+                //尝试 写入 这里上写锁
                 upLock = upServerLock.writeLock();
                 upLock.lock();
+                //更新上线服务
                 upServerList = newUpList;
                 upLock.unlock();
-
+                //触发服务状态修改的事件
                 notifyServerStatusChangeListener(changedServers);
             } finally {
                 pingInProgress.set(false);
@@ -714,6 +758,7 @@ public class BaseLoadBalancer extends AbstractLoadBalancer implements
     }
 
     private void notifyServerStatusChangeListener(final Collection<Server> changedServers) {
+        //监听器 不为空的情况下 依次对服务进行处理
         if (changedServers != null && !changedServers.isEmpty() && !serverStatusListeners.isEmpty()) {
             for (ServerStatusChangeListener listener : serverStatusListeners) {
                 try {
@@ -733,6 +778,7 @@ public class BaseLoadBalancer extends AbstractLoadBalancer implements
      * Get the alive server dedicated to key
      * 
      * @return the dedicated server
+     *  委托给 rule 对象查找对应的server 对象内部是通过轮询来实现
      */
     public Server chooseServer(Object key) {
         if (counter == null) {
@@ -766,15 +812,22 @@ public class BaseLoadBalancer extends AbstractLoadBalancer implements
         }
     }
 
+    /**
+     * 标记某个服务 处于下线状态
+     * @param server Server to mark as down
+     */
     public void markServerDown(Server server) {
+        //如果服务对象不存在 或者属于非活跃状态 直接返回
         if (server == null || !server.isAlive()) {
             return;
         }
 
         logger.error("LoadBalancer [{}]:  markServerDown called on [{}]", name, server.getId());
+        //设置成非活跃状态
         server.setAlive(false);
         // forceQuickPing();
 
+        //触发事件
         notifyServerStatusChangeListener(singleton(server));
     }
 
@@ -883,6 +936,7 @@ public class BaseLoadBalancer extends AbstractLoadBalancer implements
      * Default implementation for <c>IPingStrategy</c>, performs ping
      * serially, which may not be desirable, if your <c>IPing</c>
      * implementation is slow, or you have large number of servers.
+     * 默认的 检查服务策略对象 就是挨个遍历每个server 并返回能否ping通的结果
      */
     private static class SerialPingStrategy implements IPingStrategy {
 

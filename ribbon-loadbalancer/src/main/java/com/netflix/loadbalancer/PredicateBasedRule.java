@@ -25,13 +25,13 @@ import com.google.common.base.Optional;
  * 
  * 
  * @author awang
- *
+ *      基于给定的特殊条件 进行 均衡负载
  */
 public abstract class PredicateBasedRule extends ClientConfigEnabledRoundRobinRule {
    
     /**
      * Method that provides an instance of {@link AbstractServerPredicate} to be used by this class.
-     * 
+     * 子类实现该方法 并提供合适的 谓语
      */
     public abstract AbstractServerPredicate getPredicate();
         
@@ -42,6 +42,7 @@ public abstract class PredicateBasedRule extends ClientConfigEnabledRoundRobinRu
     @Override
     public Server choose(Object key) {
         ILoadBalancer lb = getLoadBalancer();
+        //按照 谓语过滤后 再进行轮询
         Optional<Server> server = getPredicate().chooseRoundRobinAfterFiltering(lb.getAllServers(), key);
         if (server.isPresent()) {
             return server.get();

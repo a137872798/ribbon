@@ -31,10 +31,13 @@ import java.util.List;
  * 
  * 
  * @author stonse
- * 
+ *      均衡负载骨架类  内部应该就是维护一个服务列表 通过调用不同的方法 返回不同的列表实例
  */
 public abstract class AbstractLoadBalancer implements ILoadBalancer {
-    
+
+    /**
+     * 服务状态组 分为 上线中 下线 以及全部
+     */
     public enum ServerGroup{
         ALL,
         STATUS_UP,

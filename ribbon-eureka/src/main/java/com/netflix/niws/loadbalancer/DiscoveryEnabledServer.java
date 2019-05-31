@@ -26,7 +26,7 @@ import com.netflix.loadbalancer.Server;
  * Servers that were obtained via Discovery and hence contain
  * meta data in the form of InstanceInfo
  * @author stonse
- *
+ *      对应到 DiscoveryEnabledNIWSServerList
  */
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "EQ_DOESNT_OVERRIDE_EQUALS")
 public class DiscoveryEnabledServer extends Server{
@@ -38,11 +38,19 @@ public class DiscoveryEnabledServer extends Server{
         this(instanceInfo, useSecurePort, false);
     }
 
+    /**
+     * 初始化 具备自主发现服务能力的对象
+     * @param instanceInfo
+     * @param useSecurePort
+     * @param useIpAddr
+     */
     public DiscoveryEnabledServer(final InstanceInfo instanceInfo, boolean useSecurePort, boolean useIpAddr) {
         super(useIpAddr ? instanceInfo.getIPAddr() : instanceInfo.getHostName(), instanceInfo.getPort());
+        //如果使用端口 且是安全的 就设置默认的 安全端口
     	if(useSecurePort && instanceInfo.isPortEnabled(PortType.SECURE))
     		super.setPort(instanceInfo.getSecurePort());
         this.instanceInfo = instanceInfo;
+        //生成一个新的元数据信息
         this.serviceInfo = new MetaInfo() {
             @Override
             public String getAppName() {

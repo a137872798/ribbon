@@ -90,23 +90,38 @@ public class ZoneAffinityServerListFilter<T extends Server> extends
 
         Monitors.registerObject("NIWSServerListFilter_" + niwsClientConfig.getClientName());
     }
-    
-    private boolean shouldEnableZoneAffinity(List<T> filtered) {    
+
+    /**
+     * 该方法 判断是否要按照区域来获取 服务列表
+     * @param filtered
+     * @return
+     */
+    private boolean shouldEnableZoneAffinity(List<T> filtered) {
+        //如果没有开启 区域感知功能 且没有开启 排除区域功能就 返回false
         if (!zoneAffinity && !zoneExclusive) {
             return false;
         }
+        //如果设置了该标识就是返回true 该标识代表 只允许使用本zone 的服务
         if (zoneExclusive) {
             return true;
         }
+        //获取 均衡负载 信息统计对象
         LoadBalancerStats stats = getLoadBalancerStats();
         if (stats == null) {
             return zoneAffinity;
         } else {
             logger.debug("Determining if zone affinity should be enabled with given server list: {}", filtered);
+            //获取 区域 快照
             ZoneSnapshot snapshot = stats.getZoneSnapshot(filtered);
             double loadPerServer = snapshot.getLoadPerServer();
             int instanceCount = snapshot.getInstanceCount();            
             int circuitBreakerTrippedCount = snapshot.getCircuitTrippedCount();
+            //blackOutServerPercentageThreshold 代表 故障百分比
+            //activeReqeustsPerServerThreshold 代表 实例平均负载
+            //availableServersThreshold 代表可用实例数
+            /**
+             * 上述几个指标的意思就是 如果 本区域中 故障的 服务器超过80% 或者 平均每个实例负载 超过60% 或者 可用实例小于2 允许使用其他zone 的服务实例
+             */
             if (((double) circuitBreakerTrippedCount) / instanceCount >= blackOutServerPercentageThreshold.getOrDefault()
                     || loadPerServer >= activeReqeustsPerServerThreshold.getOrDefault()
                     || (instanceCount - circuitBreakerTrippedCount) < availableServersThreshold.getOrDefault()) {
@@ -119,12 +134,33 @@ public class ZoneAffinityServerListFilter<T extends Server> extends
             
         }
     }
-        
+
+    /**
+     * 针对 zone 进行 过滤 spring cloud 整合 eureka 和 ribbon 时
+     * @param servers
+     * @return
+     */
     @Override
     public List<T> getFilteredListOfServers(List<T> servers) {
+        //如果区域信息不为空 且 开启了 区域感知功能 或者 开启了限定了必须使用本区域的服务 且 存在服务对象的时候 可以开始过滤
         if (zone != null && (zoneAffinity || zoneExclusive) && servers !=null && servers.size() > 0){
+            //使用zoneAffinityPredicate 对象 对server 进行过滤
+            /**
+             * 该谓语对象的内部实现  先将server 包装成 PredicateKey 根据zone 来匹配
+             *     public boolean apply(PredicateKey input) {
+             *         Server s = input.getServer();
+             *         String az = s.getZone();
+             *         if (az != null && zone != null && az.toLowerCase().equals(zone.toLowerCase())) {
+             *             return true;
+             *         } else {
+             *             return false;
+             *         }
+             *     }
+             */
             List<T> filteredServers = Lists.newArrayList(Iterables.filter(
                     servers, this.zoneAffinityPredicate.getServerOnlyPredicate()));
+            //判断是否要进行区域感知 要的话就返回过滤后的结果 否则返回 原来的 servers
+            //这里将根据 一系列统计信息 判断 是否合适开启 区域感知 功能 不合适的话 就不会只返回 对应zone 的服务对象
             if (shouldEnableZoneAffinity(filteredServers)) {
                 return filteredServers;
             } else if (zoneAffinity) {

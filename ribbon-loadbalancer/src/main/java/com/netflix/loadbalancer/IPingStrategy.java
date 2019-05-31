@@ -10,6 +10,7 @@ package com.netflix.loadbalancer;
  * @author Dmitry_Cherkas
  * @see Server
  * @see IPing
+ *      通过一个 能检测服务是否存活的对象 和一组服务信息 能返回对应的 ping结果
  */
 public interface IPingStrategy {
 

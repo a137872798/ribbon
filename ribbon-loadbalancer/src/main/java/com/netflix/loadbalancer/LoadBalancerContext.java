@@ -358,8 +358,10 @@ public class LoadBalancerContext implements IClientConfigAware {
             isSecure =  scheme.equalsIgnoreCase("https");
         }
         int port = uri.getPort();
+        //这里使用了 http 默认监听端口 80
         if (port < 0 && !isSecure){
             port = 80;
+            //这里 使用https 默认监听端口 443
         } else if (port < 0 && isSecure){
             port = 443;
         }
@@ -568,11 +570,22 @@ public class LoadBalancerContext implements IClientConfigAware {
         return new Server(host, port);
     }
 
+    /**
+     * 根据 服务信息 来构造url
+     * @param server
+     * @param original
+     * @return
+     */
     public URI reconstructURIWithServer(Server server, URI original) {
+        //获取 服务本身的主机
         String host = server.getHost();
+        //获取 服务端口
         int port = server.getPort();
+        //获取协议信息
         String scheme = server.getScheme();
-        
+
+        //判断端口号和 ip 是否一致 如果一致情况下 应该是不需要做处理
+        //如果将服务名拼接在 scheme 后面 name 获取到的 host 就是服务名
         if (host.equals(original.getHost()) 
                 && port == original.getPort()
                 && scheme == original.getScheme()) {
@@ -591,6 +604,7 @@ public class LoadBalancerContext implements IClientConfigAware {
             if (!Strings.isNullOrEmpty(original.getRawUserInfo())) {
                 sb.append(original.getRawUserInfo()).append("@");
             }
+            //这里就是单纯的 替换 host 和 port
             sb.append(host);
             if (port >= 0) {
                 sb.append(":").append(port);

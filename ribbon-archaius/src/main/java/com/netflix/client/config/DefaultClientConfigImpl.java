@@ -63,7 +63,7 @@ myclient.foo.ReadTimeout=1000
  *
  * @author Sudhir Tonse
  * @author awang
- *
+ *      ribbon 客户端的默认实现
  */
 public class DefaultClientConfigImpl extends AbstractDefaultClientConfigImpl {
     public static final String DEFAULT_PROPERTY_NAME_SPACE = CommonClientConfigKey.DEFAULT_NAME_SPACE;

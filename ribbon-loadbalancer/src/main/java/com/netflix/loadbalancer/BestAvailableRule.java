@@ -30,7 +30,7 @@ import java.util.List;
  * chosen by a large number of clients and immediately gets overwhelmed.
  * 
  * @author awang
- *
+ *      该规则对象 会先过滤掉失效的 服务 并优先选择请求数最小的那个
  */
 public class BestAvailableRule extends ClientConfigEnabledRoundRobinRule {
 
@@ -38,16 +38,21 @@ public class BestAvailableRule extends ClientConfigEnabledRoundRobinRule {
     
     @Override
     public Server choose(Object key) {
+        //当统计对象不存在的时候 使用父类的 方法
         if (loadBalancerStats == null) {
             return super.choose(key);
         }
+        //获取所有可用服务对象
         List<Server> serverList = getLoadBalancer().getAllServers();
         int minimalConcurrentConnections = Integer.MAX_VALUE;
         long currentTime = System.currentTimeMillis();
         Server chosen = null;
         for (Server server: serverList) {
+            //获取每个服务对应的 统计信息
             ServerStats serverStats = loadBalancerStats.getSingleServerStat(server);
+            // circuitBreaker 代表是否 触发了断路 如果没有触发的情况下 之后根据 请求数量 获取对应的服务
             if (!serverStats.isCircuitBreakerTripped(currentTime)) {
+                //获取总请求次数
                 int concurrentConnections = serverStats.getActiveRequestsCount(currentTime);
                 if (concurrentConnections < minimalConcurrentConnections) {
                     minimalConcurrentConnections = concurrentConnections;

@@ -40,7 +40,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * meet the desired criteria.
  * 
  * @author stonse
- * 
+ *      拓展于 基本的均衡负载对象
+ *      该对象应该是会自动在合适的时机调用 addServer 对象
  */
 public class DynamicServerListLoadBalancer<T extends Server> extends BaseLoadBalancer {
     private static final Logger LOGGER = LoggerFactory.getLogger(DynamicServerListLoadBalancer.class);
@@ -48,13 +49,19 @@ public class DynamicServerListLoadBalancer<T extends Server> extends BaseLoadBal
     boolean isSecure = false;
     boolean useTunnel = false;
 
-    // to keep track of modification of server lists
+    // to keep track of modification of server lists 列表当前是否属于正常状态
     protected AtomicBoolean serverListUpdateInProgress = new AtomicBoolean(false);
 
+    /**
+     * 服务实现列表对象 使用易变修饰符 修饰
+     */
     volatile ServerList<T> serverListImpl;
 
     volatile ServerListFilter<T> filter;
 
+    /**
+     * 该对象 负责实现对于服务实例的更新工作
+     */
     protected final ServerListUpdater.UpdateAction updateAction = new ServerListUpdater.UpdateAction() {
         @Override
         public void doUpdate() {
@@ -62,9 +69,14 @@ public class DynamicServerListLoadBalancer<T extends Server> extends BaseLoadBal
         }
     };
 
+    /**
+     * 定义了更新服务的接口方法
+     */
     protected volatile ServerListUpdater serverListUpdater;
 
     public DynamicServerListLoadBalancer() {
+        //父类构造方法 设置默认的均衡负载规则(roundrobin) 以及 开启一个定时任务 会定时ping 当前的服务列表 并对无效的服务进行下线
+        //todo 还没有看ping具体是如何实现 预测是 访问看结果是否是 404 之类的吧
         super();
     }
 
@@ -123,6 +135,7 @@ public class DynamicServerListLoadBalancer<T extends Server> extends BaseLoadBal
             String serverListUpdaterClassName = clientConfig.getOrDefault(
                     CommonClientConfigKey.ServerListUpdaterClassName);
 
+            // 这里通过update 类的名字 来生成对象
             this.serverListUpdater = (ServerListUpdater) factory.create(serverListUpdaterClassName, clientConfig);
 
             restOfInit(clientConfig);
@@ -148,31 +161,45 @@ public class DynamicServerListLoadBalancer<T extends Server> extends BaseLoadBal
         this.setEnablePrimingConnections(primeConnection);
         LOGGER.info("DynamicServerListLoadBalancer for client {} initialized: {}", clientConfig.getClientName(), this.toString());
     }
-    
-    
+
+
+    /**
+     * 设置ServerList 对象
+     * @param lsrv
+     */
     @Override
     public void setServersList(List lsrv) {
+        //父类 该方法就是将 servetList 设置到 allServers 中
         super.setServersList(lsrv);
         List<T> serverList = (List<T>) lsrv;
         Map<String, List<Server>> serversInZones = new HashMap<String, List<Server>>();
         for (Server server : serverList) {
             // make sure ServerStats is created to avoid creating them on hot
             // path
+            // 获取每个服务的统计信息
             getLoadBalancerStats().getSingleServerStat(server);
+            // 获取每个服务的区域信息
             String zone = server.getZone();
             if (zone != null) {
                 zone = zone.toLowerCase();
+                //根据 zone 查询 该区域下所有的server 对象
                 List<Server> servers = serversInZones.get(zone);
                 if (servers == null) {
                     servers = new ArrayList<Server>();
                     serversInZones.put(zone, servers);
                 }
+                //往 zone 中插入新的服务实例
                 servers.add(server);
             }
         }
+        //更新映射容器
         setServerListForZones(serversInZones);
     }
 
+    /**
+     * 为统计对象 更新对应的 map 该mapkey 为 zone value是 该zone 下所有的server
+     * @param zoneServersMap
+     */
     protected void setServerListForZones(
             Map<String, List<Server>> zoneServersMap) {
         LOGGER.debug("Setting server list for zones: {}", zoneServersMap);
@@ -219,6 +246,7 @@ public class DynamicServerListLoadBalancer<T extends Server> extends BaseLoadBal
      */
     public void enableAndInitLearnNewServersFeature() {
         LOGGER.info("Using serverListUpdater {}", serverListUpdater.getClass().getSimpleName());
+        //这里传入了更新的动作 看来无论是 哪个updater 实现使用的action 都是一样的
         serverListUpdater.start(updateAction);
     }
 
@@ -232,20 +260,27 @@ public class DynamicServerListLoadBalancer<T extends Server> extends BaseLoadBal
         }
     }
 
+    /**
+     * 执行更新的实际操作
+     */
     @VisibleForTesting
     public void updateListOfServers() {
         List<T> servers = new ArrayList<T>();
+        //服务列表
         if (serverListImpl != null) {
+            //通过eureka 获取最新的 服务列表
             servers = serverListImpl.getUpdatedListOfServers();
             LOGGER.debug("List of Servers for {} obtained from Discovery client: {}",
                     getIdentifier(), servers);
 
+            //如果存在过滤器的话 进行过滤
             if (filter != null) {
                 servers = filter.getFilteredListOfServers(servers);
                 LOGGER.debug("Filtered List of Servers for {} obtained from Discovery client: {}",
                         getIdentifier(), servers);
             }
         }
+        //更新allServer 列表
         updateAllServerList(servers);
     }
 
@@ -253,17 +288,21 @@ public class DynamicServerListLoadBalancer<T extends Server> extends BaseLoadBal
      * Update the AllServer list in the LoadBalancer if necessary and enabled
      * 
      * @param ls
+     *      更新allServer 服务列表
      */
     protected void updateAllServerList(List<T> ls) {
         // other threads might be doing this - in which case, we pass
         if (serverListUpdateInProgress.compareAndSet(false, true)) {
             try {
+                //将拉取到的全部服务都设置成 alive
                 for (T s : ls) {
                     s.setAlive(true); // set so that clients can start using these
                                       // servers right away instead
                                       // of having to wait out the ping cycle.
                 }
+                //将结果设置到 serverList 中
                 setServersList(ls);
+                //强制 ping 目前是 noop
                 super.forceQuickPing();
             } finally {
                 serverListUpdateInProgress.set(false);

@@ -26,7 +26,7 @@ import java.util.List;
  * server from the existing list of server.
  * 
  * @author stonse
- * 
+ * 		均衡负载接口 该接口内部维护了一组服务
  */
 public interface ILoadBalancer {
 
@@ -37,6 +37,7 @@ public interface ILoadBalancer {
 	 * (helpful in cases where you want to give more "weightage" perhaps ..)
 	 * 
 	 * @param newServers new servers to add
+	 *                   为负载对象 加入一组服务
 	 */
 	public void addServers(List<Server> newServers);
 	
@@ -55,6 +56,7 @@ public interface ILoadBalancer {
 	 * (assuming that the LB Impl does a ping)
 	 * 
 	 * @param server Server to mark as down
+	 *        标识某个服务处于下线状态 否则会进入下次均衡负载的 候选服务
 	 */
 	public void markServerDown(Server server);
 	
@@ -72,11 +74,13 @@ public interface ILoadBalancer {
 
 	/**
 	 * @return Only the servers that are up and reachable.
+	 * 		仅返回当前可用服务列表
      */
     public List<Server> getReachableServers();
 
     /**
      * @return All known servers, both reachable and unreachable.
+	 * 		包含可用的和不可用的
      */
 	public List<Server> getAllServers();
 }

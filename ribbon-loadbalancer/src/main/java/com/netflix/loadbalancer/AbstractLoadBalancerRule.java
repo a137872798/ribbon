@@ -23,9 +23,13 @@ import com.netflix.client.IClientConfigAware;
  * Class that provides a default implementation for setting and getting load balancer
  * @author stonse
  *
+ *      均衡负载规则 骨架类
  */
 public abstract class AbstractLoadBalancerRule implements IRule, IClientConfigAware {
 
+    /**
+     * 内部维护一个 具备均衡负载功能的类
+     */
     private ILoadBalancer lb;
         
     @Override

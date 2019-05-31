@@ -26,6 +26,7 @@ import java.util.function.BiConsumer;
  * and for method execution.
  * 
  * @author awang
+ *      客户端配置对象
  */
 
 public interface IClientConfig {
