@@ -41,24 +41,41 @@ import java.util.concurrent.TimeUnit;
  * A class contains APIs intended to be used be load balancing client which is subclass of this class.
  * 
  * @author awang
+ * 均衡负载的 上下文对象
  */
 public class LoadBalancerContext implements IClientConfigAware {
     private static final Logger logger = LoggerFactory.getLogger(LoadBalancerContext.class);
 
-    protected String clientName = "default";          
+    protected String clientName = "default";
 
+    /**
+     * 本次client 请求的 目标地址
+     */
     protected String vipAddresses;
 
+    // 设置默认值
     protected int maxAutoRetriesNextServer = CommonClientConfigKey.MaxAutoRetriesNextServer.defaultValue();
     protected int maxAutoRetries = CommonClientConfigKey.MaxAutoRetries.defaultValue();
 
+    /**
+     * 默认的重试处理器
+     */
     protected RetryHandler defaultRetryHandler = new DefaultLoadBalancerRetryHandler();
 
 
+    /**
+     * 是否针对所有 请求都允许重试
+     */
     protected boolean okToRetryOnAllOperations = CommonClientConfigKey.OkToRetryOnAllOperations.defaultValue();
 
+    /**
+     * 均衡负载对象
+     */
     private ILoadBalancer lb;
 
+    /**
+     * netflix 下的某个组件
+     */
     private volatile Timer tracer;
 
     public LoadBalancerContext(ILoadBalancer lb) {
@@ -67,7 +84,7 @@ public class LoadBalancerContext implements IClientConfigAware {
 
     /**
      * Delegate to {@link #initWithNiwsConfig(IClientConfig)}
-     * @param clientConfig
+     * @param clientConfig 使用传入的config 更新属性
      */
     public LoadBalancerContext(ILoadBalancer lb, IClientConfig clientConfig) {
         this.lb = lb;
@@ -81,6 +98,7 @@ public class LoadBalancerContext implements IClientConfigAware {
 
     /**
      * Set necessary parameters from client configuration and register with Servo monitors.
+     * 使用传入的config对象更新属性
      */
     @Override
     public void initWithNiwsConfig(IClientConfig clientConfig) {
@@ -91,12 +109,14 @@ public class LoadBalancerContext implements IClientConfigAware {
         if (StringUtils.isEmpty(clientName)) {
             clientName = "default";
         }
+        // 从config 上解析 address
         vipAddresses = clientConfig.resolveDeploymentContextbasedVipAddresses();
         maxAutoRetries = clientConfig.getOrDefault(CommonClientConfigKey.MaxAutoRetries);
         maxAutoRetriesNextServer = clientConfig.getOrDefault(CommonClientConfigKey.MaxAutoRetriesNextServer);
         okToRetryOnAllOperations = clientConfig.getOrDefault(CommonClientConfigKey.OkToRetryOnAllOperations);
         defaultRetryHandler = new DefaultLoadBalancerRetryHandler(clientConfig);
-        
+
+        // 获取链路对象
         tracer = getExecuteTracer();
 
         Monitors.registerObject("Client_" + clientName, this);

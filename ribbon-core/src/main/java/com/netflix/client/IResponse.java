@@ -23,35 +23,40 @@ import java.util.Map;
 
 /**
  * Response interface for the client framework.  
- *
+ * 代表client 发起请求后返回的 响应对象
  */
 public interface IResponse extends Closeable
 {
    
    /**
-    * Returns the raw entity if available from the response 
+    * Returns the raw entity if available from the response
+    * 获取res 中存放的原始数据
     */
    public Object getPayload() throws ClientException;
       
    /**
     * A "peek" kinda API. Use to check if your service returned a response with an Entity
+    * 判断该res 是否包含 数据
     */
    public boolean hasPayload();
    
    /**
     * @return true if the response is deemed success, for example, 200 response code for http protocol.
+    * 判断本次请求是否成功
     */
    public boolean isSuccess();
    
       
    /**
     * Return the Request URI that generated this response
+    * 获取请求的 url
     */
    public URI getRequestedURI();
    
    /**
     * 
     * @return Headers if any in the response.
+    * 获取请求头
     */
    public Map<String, ?> getHeaders();   
 }

@@ -1,5 +1,8 @@
 package com.netflix.client.config;
 
+/**
+ * 非包装类 (int) 因为是volatile 修饰所以能保证获取到的都是最新值
+ */
 public class UnboxedIntProperty {
     private volatile int value;
 

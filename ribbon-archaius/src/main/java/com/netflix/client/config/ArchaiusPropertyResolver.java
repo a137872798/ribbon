@@ -14,20 +14,31 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
+/**
+ * 适配 Archaius 具备加载动态配置的能力
+ */
 public class ArchaiusPropertyResolver implements PropertyResolver {
     private static final Logger LOG = LoggerFactory.getLogger(ArchaiusPropertyResolver.class);
 
     public static final ArchaiusPropertyResolver INSTANCE = new ArchaiusPropertyResolver();
+
+    /**
+     * 代表 动态配置的上级抽象 在初始化时 会依次尝试进行加载
+     */
     private final AbstractConfiguration config;
     private final CopyOnWriteArrayList<Runnable> actions = new CopyOnWriteArrayList<>();
 
     private ArchaiusPropertyResolver() {
+        // 生成 archaius
         this.config = ConfigurationManager.getConfigInstance();
 
+        // 添加监听器对象 在对应的属性发生改变时触发
         ConfigurationManager.getConfigInstance().addConfigurationListener(new ConfigurationListener() {
             @Override
             public void configurationChanged(ConfigurationEvent event) {
+                // 代表该事件是在更新后触发 就执行对应的action
                 if (!event.isBeforeUpdate()) {
+                    // ArchaiusPropertyResolver::invokeAction 代表执行 run() 只是不抛异常
                     actions.forEach(ArchaiusPropertyResolver::invokeAction);
                 }
             }

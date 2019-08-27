@@ -22,10 +22,11 @@ import java.lang.reflect.Modifier;
 import java.util.HashMap;
 
 
+/**
+ * 代表客户端一侧异常
+ */
 public class ClientException extends Exception{
-	/**
-	 * 
-	 */
+
 	private static final long serialVersionUID = -7697654244064441234L;
 	
 	/**
@@ -54,9 +55,18 @@ public class ClientException extends Exception{
             }
         }
     }
-    
+
+    /**
+     * 错误码
+     */
     protected int errorCode;
+    /**
+     * 错误信息
+     */
     protected String message;
+    /**
+     * 错误对象
+     */
     protected Object errorObject;
     protected ErrorType errorType = ErrorType.GENERAL;
 

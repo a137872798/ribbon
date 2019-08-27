@@ -23,7 +23,7 @@ public interface PropertyResolver {
     /**
      * Provide action to invoke when config changes
      * @param action
-     * 设置 一个 当本属性发生变化时 执行的 runnable
+     * 设置 一个 当某个属性发生变化时触发的 action
      */
     void onChange(Runnable action);
 }

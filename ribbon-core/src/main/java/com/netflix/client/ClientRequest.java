@@ -26,13 +26,26 @@ import com.netflix.client.config.IClientConfig;
  * It is expected that this object is immutable.
  * 
  * @author awang
+ * 客户端请求对象
  *
  */
 public class ClientRequest implements Cloneable {
 
+    /**
+     * 用于请求的url
+     */
     protected URI uri;
+    /**
+     * 均衡负载的 key
+     */
     protected Object loadBalancerKey = null;
+    /**
+     * 本request 是否支持重试
+     */
     protected Boolean isRetriable = null;
+    /**
+     * 更新的配置
+     */
     protected IClientConfig overrideConfig;
         
     public ClientRequest() {
@@ -127,6 +140,7 @@ public class ClientRequest implements Cloneable {
      * Sub classes are recommended to override this method to provide more efficient implementation.
      * 
      * @param newURI
+     * 替换当前req 的url 属性
      */
     public ClientRequest replaceUri(URI newURI) {
         ClientRequest req;

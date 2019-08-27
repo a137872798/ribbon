@@ -26,9 +26,10 @@ import com.netflix.client.config.IClientConfig;
  *
  * @author stonse
  * @author awang 
- *
+ * client配置感知类
  */
 public interface IClientConfigAware {
+
     interface Factory {
         Object create(String type, IClientConfig config) throws InstantiationException, IllegalAccessException, ClassNotFoundException;
     }

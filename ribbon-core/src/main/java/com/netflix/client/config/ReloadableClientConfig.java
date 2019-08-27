@@ -192,6 +192,7 @@ public abstract class ReloadableClientConfig implements IClientConfig {
      *            为指定的 key 设置一个用于动态刷新属性的函数
      */
     private <T> void autoRefreshFromPropertyResolver(final IClientConfigKey<T> key) {
+        // computeIfAbsent 代表 如果不存在 value时 传入key 对象并生成value 设置到容器中 这里的 ignore 就是key
         changeActions.computeIfAbsent(key, ignore -> {
             // 生成一个加载属性的 函数
             final Supplier<Optional<T>> valueSupplier = () -> resolveFromPropertyResolver(key);
@@ -201,6 +202,7 @@ public abstract class ReloadableClientConfig implements IClientConfig {
             }
 
             final AtomicReference<Optional<T>> previous = new AtomicReference<>(current);
+            // 代表设置进去的 runnable 对象 在 onChange时触发 替换之前维护的 prev
             return () -> {
                 // 当感知到 onChange 时 自动执行该函数并设置值 和 打印日志
                 final Optional<T> next = valueSupplier.get();
@@ -239,7 +241,7 @@ public abstract class ReloadableClientConfig implements IClientConfig {
         // 不允许 生成value 的 提供者函数为null
         Preconditions.checkNotNull(valueSupplier, "defaultValueSupplier cannot be null");
 
-        // 尝试从 动态属性工厂中获取 期望的属性 不存在就生成一个新的对象
+        // computeIfAbsent 代表 如果 key对应的value不存在时  使用key去生成一个新的value 并保存到容器中
         return (Property<T>) dynamicProperties.computeIfAbsent(key, ignore -> new ReloadableProperty<T>() {
             /**
              * 设置当前属性为 null
@@ -355,6 +357,7 @@ public abstract class ReloadableClientConfig implements IClientConfig {
 
         return getOrCreateProperty(
                 key,
+                // 通过前缀获取属性
                 getPrefixedMapPropertySupplier(key),
                 key::defaultValue);
     }
@@ -438,6 +441,12 @@ public abstract class ReloadableClientConfig implements IClientConfig {
         }
     }
 
+    /**
+     * 通过前缀查找属性 调用该方法必须要求 configKey 携带一个valueOf(Map) 的方法
+     * @param key
+     * @param <T>
+     * @return
+     */
     private <T> Supplier<Optional<T>> getPrefixedMapPropertySupplier(IClientConfigKey<T> key) {
         final Method method;
         try {
@@ -449,6 +458,7 @@ public abstract class ReloadableClientConfig implements IClientConfig {
         return () -> {
             final Map<String, String> values = new HashMap<>();
 
+            // 将resolver中满足条件的所有属性都put到values 中
             resolver.forEach(getNameSpace() + "." + key.key(), values::put);
 
             if (!StringUtils.isEmpty(clientName)) {
@@ -538,6 +548,11 @@ public abstract class ReloadableClientConfig implements IClientConfig {
         return Optional.ofNullable(getProperty(key)).map(Boolean.class::cast).orElse(defaultValue);
     }
 
+    /**
+     * 将override中的数据填充到本config中
+     * @param override
+     * @return
+     */
     public IClientConfig applyOverride(IClientConfig override) {
         if (override == null) {
             return this;

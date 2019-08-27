@@ -52,7 +52,7 @@ import com.netflix.config.ConfigurationManager;
  * </code>
  * 
  * @author stonse
- * 
+ *  默认的地址解析器
  */
 public class SimpleVipAddressResolver implements VipAddressResolver {
 
@@ -71,7 +71,12 @@ public class SimpleVipAddressResolver implements VipAddressResolver {
         }
         return replaceMacrosFromConfig(vipAddressMacro);
     }
-    
+
+    /**
+     * 如果发现通配符 去 config 对象中获取对应属性并设置
+     * @param macro
+     * @return
+     */
     private static String replaceMacrosFromConfig(String macro) {
         String result = macro;
         Matcher matcher = VAR_PATTERN.matcher(result);

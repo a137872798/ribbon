@@ -38,6 +38,7 @@ import org.slf4j.LoggerFactory;
  * namely, the keystore and truststore.
  * 
  * @author jzarfoss
+ * ssl 上下文工厂
  *
  */
 public abstract class AbstractSslContextFactory {
