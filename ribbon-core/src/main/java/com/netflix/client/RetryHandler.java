@@ -25,6 +25,7 @@ import java.net.ConnectException;
  * so that the load balancer can avoid such server.
  *  
  * @author awang
+ * 具备判断 是否是可重试异常 以及避开之前的 server 进行重试的能力
  */
 public interface RetryHandler {
 
@@ -37,6 +38,7 @@ public interface RetryHandler {
      * @param sameServer if true, the method is trying to determine if retry can be 
      *        done on the same server. Otherwise, it is testing whether retry can be
      *        done on a different server
+     *                   测试异常是否是可重试的
      */
     public boolean isRetriableException(Throwable e, boolean sameServer);
 
@@ -46,16 +48,19 @@ public interface RetryHandler {
      * whether successive exceptions of such should trip the circuit breaker to a particular
      * host by the load balancer. If false but a server response is absent, 
      * load balancer will also close the circuit upon getting such exception.
+     * 判断是否为 电路故障???
      */
     public boolean isCircuitTrippingException(Throwable e);
         
     /**
      * @return Number of maximal retries to be done on one server
+     * 获取相同 server 的最大重试次数
      */
     public int getMaxRetriesOnSameServer();
 
     /**
      * @return Number of maximal different servers to retry
+     * 获取不同server 的最大重试次数
      */
     public int getMaxRetriesOnNextServer();
 }

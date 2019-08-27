@@ -30,10 +30,20 @@ import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
+/**
+ * configKey 是用来 标识 config的
+ * @param <T>
+ */
 public abstract class CommonClientConfigKey<T> implements IClientConfigKey<T> {
 
+    /**
+     * 默认的 配置命名空间 就是 ribbon
+     */
     public static final String DEFAULT_NAME_SPACE = "ribbon";
 
+    /**
+     * 当泛型类型被声明成 String 时 就代表 本config是String类型的
+     */
     public static final IClientConfigKey<String> AppName = new CommonClientConfigKey<String>("AppName"){};
     
     public static final IClientConfigKey<String> Version = new CommonClientConfigKey<String>("Version"){};
@@ -196,11 +206,19 @@ public abstract class CommonClientConfigKey<T> implements IClientConfigKey<T> {
     
     public static final IClientConfigKey<String> ListOfServers = new CommonClientConfigKey<String>("listOfServers", "") {};
 
+    /**
+     * 缓存容器
+     */
     private static final Set<IClientConfigKey> keys = new HashSet<IClientConfigKey>();
-        
+
+    /**
+     * 这里尝试为 所有静态属性做缓存
+     */
     static {
         for (Field f: CommonClientConfigKey.class.getDeclaredFields()) {
+            // 要求是 static 字段
             if (Modifier.isStatic(f.getModifiers()) //&& Modifier.isPublic(f.getModifiers())
+                    // 要求该属性是 IClientConfigKey 的实现类
                     && IClientConfigKey.class.isAssignableFrom(f.getType())) {
                 try {
                     keys.add((IClientConfigKey) f.get(null));
@@ -221,12 +239,18 @@ public abstract class CommonClientConfigKey<T> implements IClientConfigKey<T> {
     }
 
     /**
-     * return all the public static keys defined in this class 
+     * return all the public static keys defined in this class
+     * 返回缓存容器
      */
     public static Set<IClientConfigKey> keys() {
         return keys;
     }
 
+    /**
+     * 如果存在于缓存中直接返回 否则创建一个新的 configKey 对象
+     * @param name
+     * @return
+     */
     public static IClientConfigKey valueOf(final String name) {
         for (IClientConfigKey key: keys()) {
             if (key.key().equals(name)) {
@@ -245,23 +269,41 @@ public abstract class CommonClientConfigKey<T> implements IClientConfigKey<T> {
             }
         };
     }
-    
+
+    /**
+     * 该config 对应的属性
+     */
     private final String configKey;
+    /**
+     * 配置的值类型
+     */
     private final Class<T> type;
+    /**
+     * 默认值
+     */
     private T defaultValue;
 
+    /**
+     * 只使用 configKey 进行初始化 没有默认值
+     * @param configKey
+     */
     @SuppressWarnings("unchecked")
     protected CommonClientConfigKey(String configKey) {
         this(configKey, null);
     }
 
     protected CommonClientConfigKey(String configKey, T defaultValue) {
+        // 设置 config属性名
         this.configKey = configKey;
+        // 获取本配置类的 name
         Type superclass = getClass().getGenericSuperclass();
         checkArgument(superclass instanceof ParameterizedType,
                 "%s isn't parameterized", superclass);
+        // 获取泛型类型
         Type runtimeType = ((ParameterizedType) superclass).getActualTypeArguments()[0];
+        // 获取泛型类型的原始类型
         type = (Class<T>) TypeToken.of(runtimeType).getRawType();
+        // 设置默认值
         this.defaultValue = defaultValue;
     }
 

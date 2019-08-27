@@ -22,7 +22,7 @@ package com.netflix.client.config;
  * for the commonly defined client configuration keys.
  * 
  * @author awang
- *		client 对应的 配置信息对象
+ *		config 一般是 key:value 的形式  这里 增加了 关于 key 的功能
  */
 public interface IClientConfigKey<T> {
 
@@ -40,11 +40,21 @@ public interface IClientConfigKey<T> {
 	
 	/**
      * @return Data type for the key. For example, Integer.class.
+	 * 返回该config 是 什么类型 比如 port 可能就是 Integer 类型
 	 */
 	Class<T> type();
 
+	/**
+	 * 返回该配置的默认值
+	 * @return
+	 */
 	default T defaultValue() { return null; }
 
+	/**
+	 * 处理该 configKey 属性 并返回一个新的 configKey
+	 * @param args
+	 * @return
+	 */
 	default IClientConfigKey<T> format(Object ... args) {
 		return create(String.format(key(), args), type(), defaultValue());
 	}

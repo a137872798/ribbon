@@ -32,21 +32,40 @@ import java.util.List;
  * {@link RetryHandler}
  * 
  * @author awang
+ * 默认的重试处理器  这里只负责处理 java.net 可能出现的异常
  */
 public class DefaultLoadBalancerRetryHandler implements RetryHandler {
 
+    /**
+     * 维护了 java.net 相关的可重试异常
+     */
     @SuppressWarnings("unchecked")
     private List<Class<? extends Throwable>> retriable = 
             Lists.<Class<? extends Throwable>>newArrayList(ConnectException.class, SocketTimeoutException.class);
-    
+
+    /**
+     * 电路联系???
+     */
     @SuppressWarnings("unchecked")
     private List<Class<? extends Throwable>> circuitRelated = 
             Lists.<Class<? extends Throwable>>newArrayList(SocketException.class, SocketTimeoutException.class);
 
+    /**
+     * 从同一 server 进行重试的最大次数
+     */
     protected final int retrySameServer;
+    /**
+     * 从不同 server 进行重试的最大次数
+     */
     protected final int retryNextServer;
+    /**
+     * 判断是否是可重试的
+     */
     protected final boolean retryEnabled;
 
+    /**
+     * 默认情况不可重试
+     */
     public DefaultLoadBalancerRetryHandler() {
         this.retrySameServer = 0;
         this.retryNextServer = 0;
@@ -58,7 +77,11 @@ public class DefaultLoadBalancerRetryHandler implements RetryHandler {
         this.retryNextServer = retryNextServer;
         this.retryEnabled = retryEnabled;
     }
-    
+
+    /**
+     * 使用配置中的属性去初始化对象
+     * @param clientConfig
+     */
     public DefaultLoadBalancerRetryHandler(IClientConfig clientConfig) {
         this.retrySameServer = clientConfig.getOrDefault(CommonClientConfigKey.MaxAutoRetries);
         this.retryNextServer = clientConfig.getOrDefault(CommonClientConfigKey.MaxAutoRetriesNextServer);

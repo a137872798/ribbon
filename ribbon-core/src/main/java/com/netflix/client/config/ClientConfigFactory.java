@@ -22,14 +22,31 @@ import java.util.stream.StreamSupport;
 
 /**
  * Created by awang on 7/18/14.
+ * Client端的 配置工厂
  */
 public interface ClientConfigFactory {
+
+    /**
+     * 生成一个新的 配置对象
+     * @return
+     */
     IClientConfig newConfig();
 
+    /**
+     * 获取默认的配置工厂
+     */
     ClientConfigFactory DEFAULT = findDefaultConfigFactory();
 
+    /**
+     * 看来不同的工厂有不同的优先级 默认为0
+     * @return
+     */
     default int getPriority() { return 0; }
 
+    /**
+     * 根据SPI 加载所有的 configFactory对象 并按照优先级排序 返回第一个对象
+     * @return
+     */
     static ClientConfigFactory findDefaultConfigFactory() {
         return StreamSupport.stream(ServiceLoader.load(ClientConfigFactory.class).spliterator(), false)
                 .sorted(Comparator

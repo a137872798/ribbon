@@ -30,29 +30,48 @@ import java.util.function.BiConsumer;
  */
 
 public interface IClientConfig {
-	
+
+    /**
+     * 获取客户端名
+     * @return
+     */
 	String getClientName();
-		
+
+    /**
+     * 获取命名空间
+     * @return
+     */
 	String getNameSpace();
 
+    /**
+     * 设置命名空间
+     * @param nameSpace
+     */
 	void setNameSpace(String nameSpace);
 
 	/**
 	 * Load the properties for a given client and/or load balancer. 
 	 * @param clientName
+     * 根据传入的 clientName 来加载对应客户端的 属性
 	 */
 	void loadProperties(String clientName);
 	
 	/**
 	 * load default values for this configuration
+     * 加载默认配置
 	 */
 	void loadDefaultValues();
 
+    /**
+     * 获取所有配置
+     * @return
+     */
 	Map<String, Object> getProperties();
 
     /**
      * Iterate all properties and report the final value.  Can be null if a default value is not specified.
      * @param consumer
+     * BiConsumer 代表接收2个参数 不返回结果
      */
     default void forEach(BiConsumer<IClientConfigKey<?>, Object> consumer) {
         throw new UnsupportedOperationException();
@@ -107,6 +126,7 @@ public interface IClientConfig {
      * <li>Double</li>
      * </ul>
      * <br><br>
+     *     IClientConfigKey 代表 config 的 标识
      */
     <T> T get(IClientConfigKey<T> key);
 
@@ -122,6 +142,7 @@ public interface IClientConfig {
      * <li>Double</li>
      * </ul>
      * <br><br>
+     *     尝试获取 IClientConfigKey 的属性 没有的话 就使用默认值
      */
     default <T> T getOrDefault(IClientConfigKey<T> key) {
         return get(key, key.defaultValue());

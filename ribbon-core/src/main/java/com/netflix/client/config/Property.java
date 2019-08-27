@@ -6,21 +6,25 @@ import java.util.function.Consumer;
 /**
  * Ribbon specific encapsulation of a dynamic configuration property
  * @param <T>
+ *     代表 ribbon 中的配置属性
  */
 public interface Property<T> {
     /**
      * Register a consumer to be called when the configuration changes
      * @param consumer
+     * 注册一个 消费者 当配置发生改变时触发
      */
     void onChange(Consumer<T> consumer);
 
     /**
      * @return Get the current value.  Can be null if not set
+     * 获取属性值
      */
     Optional<T> get();
 
     /**
      * @return Get the current value or the default value if not set
+     * 获取属性值 不存在的话返回默认值
      */
     T getOrDefault();
 
@@ -28,6 +32,12 @@ public interface Property<T> {
         return new FallbackProperty<>(this, fallback);
     }
 
+    /**
+     * 通过一个数值来 初始化一个 Prop 对象
+     * @param value
+     * @param <T>
+     * @return
+     */
     static <T> Property<T> of(T value) {
         return new Property<T>() {
             @Override
