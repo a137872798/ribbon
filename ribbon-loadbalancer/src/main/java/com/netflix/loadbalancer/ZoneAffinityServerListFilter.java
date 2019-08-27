@@ -41,6 +41,7 @@ import java.util.List;
  * and exclusivity are turned off and nothing is filtered out.
  * 
  * @author stonse
+ * 要求 zone  一致的拦截器
  *
  */
 public class ZoneAffinityServerListFilter<T extends Server> extends

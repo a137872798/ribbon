@@ -20,7 +20,7 @@ package com.netflix.loadbalancer;
 /**
  * Interface that defines how we "ping" a server to check if its alive
  * @author stonse
- *
+ * 探测某个server 是否存活的对象
  */
 public interface IPing {
     

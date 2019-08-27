@@ -35,7 +35,9 @@ public interface IRule{
      */
 
     public Server choose(Object key);
-    
+
+    // get/set 均衡负载对象
+
     public void setLoadBalancer(ILoadBalancer lb);
     
     public ILoadBalancer getLoadBalancer();    

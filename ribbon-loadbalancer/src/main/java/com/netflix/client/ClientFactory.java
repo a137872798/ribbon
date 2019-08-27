@@ -36,12 +36,21 @@ import java.util.function.Supplier;
  * the  created instances.
  * 
  * @author awang
- *
+ * client 工厂
  */
 public class ClientFactory {
-    
+
+    /**
+     * client 缓存对象
+     */
     private static Map<String, IClient<?,?>> simpleClientMap = new ConcurrentHashMap<String, IClient<?,?>>();
+    /**
+     * 名字与 均衡负载对象的 映射
+     */
     private static Map<String, ILoadBalancer> namedLBMap = new ConcurrentHashMap<String, ILoadBalancer>();
+    /**
+     * name --> clientconfig
+     */
     private static ConcurrentHashMap<String, IClientConfig> namedConfig = new ConcurrentHashMap<String, IClientConfig>();
     
     private static Logger logger = LoggerFactory.getLogger(ClientFactory.class);

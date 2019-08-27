@@ -49,7 +49,7 @@ public class LoadBalancerContext implements IClientConfigAware {
     protected String clientName = "default";
 
     /**
-     * 本次client 请求的 目标地址
+     * 内部维护的 vip 地址 可能由","拼接
      */
     protected String vipAddresses;
 
@@ -177,6 +177,11 @@ public class LoadBalancerContext implements IClientConfigAware {
         this.maxAutoRetries = maxAutoRetries;
     }
 
+    /**
+     * 获取最深层的异常对象
+     * @param e
+     * @return
+     */
     protected Throwable getDeepestCause(Throwable e) {
         if(e != null) {
             int infiniteLoopPreventionCounter = 10;
@@ -188,6 +193,12 @@ public class LoadBalancerContext implements IClientConfigAware {
         return e;
     }
 
+    /**
+     * 判断给的异常是否是给定的类型
+     * @param throwableToSearchIn
+     * @param throwableToSearchFor
+     * @return
+     */
     private boolean isPresentAsCause(Throwable throwableToSearchIn,
             Class<? extends Throwable> throwableToSearchFor) {
         return isPresentAsCauseHelper(throwableToSearchIn, throwableToSearchFor) != null;
@@ -208,20 +219,30 @@ public class LoadBalancerContext implements IClientConfigAware {
         return null;
     }
 
+    /**
+     * 生成 niws 异常对象
+     * @param uri
+     * @param e
+     * @return
+     */
     protected ClientException generateNIWSException(String uri, Throwable e){
         ClientException niwsClientException;
+        // 如果是 超时就生成超时异常
         if (isPresentAsCause(e, java.net.SocketTimeoutException.class)) {
             niwsClientException = generateTimeoutNIWSException(uri, e);
+        // 未知端口就生成未知端口异常
         }else if (e.getCause() instanceof java.net.UnknownHostException){
             niwsClientException = new ClientException(
                     ClientException.ErrorType.UNKNOWN_HOST_EXCEPTION,
                     "Unable to execute RestClient request for URI:" + uri,
                     e);
+        // 连接异常
         }else if (e.getCause() instanceof java.net.ConnectException){
             niwsClientException = new ClientException(
                     ClientException.ErrorType.CONNECT_EXCEPTION,
                     "Unable to execute RestClient request for URI:" + uri,
                     e);
+        // 路由异常
         }else if (e.getCause() instanceof java.net.NoRouteToHostException){
             niwsClientException = new ClientException(
                     ClientException.ErrorType.NO_ROUTE_TO_HOST_EXCEPTION,
@@ -240,12 +261,21 @@ public class LoadBalancerContext implements IClientConfigAware {
 
     private boolean isPresentAsCause(Throwable throwableToSearchIn,
             Class<? extends Throwable> throwableToSearchFor, String messageSubStringToSearchFor) {
+        // 找到 指定class 的异常对象
         Throwable throwableFound = isPresentAsCauseHelper(throwableToSearchIn, throwableToSearchFor);
         if(throwableFound != null) {
+            // 判断是否包含该异常信息
             return throwableFound.getMessage().contains(messageSubStringToSearchFor);
         }
         return false;
     }
+
+    /**
+     * 生成超时异常
+     * @param uri
+     * @param e
+     * @return
+     */
     private ClientException generateTimeoutNIWSException(String uri, Throwable e){
         ClientException niwsClientException;
         if (isPresentAsCause(e, java.net.SocketTimeoutException.class,
@@ -263,15 +293,30 @@ public class LoadBalancerContext implements IClientConfigAware {
         return niwsClientException;
     }
 
+    /**
+     * 记录统计信息
+     * @param stats
+     * @param responseTime 响应的时间
+     */
     private void recordStats(ServerStats stats, long responseTime) {
     	if (stats == null) {
     		return;
     	}
+    	// 较少一个 当前活跃的请求
         stats.decrementActiveRequestsCount();
+    	// 增加总请求数
         stats.incrementNumRequests();
+        // 记录响应时间
         stats.noteResponseTime(responseTime);
     }
 
+    /**
+     * 记录请求完成时间
+     * @param stats
+     * @param response
+     * @param e
+     * @param responseTime
+     */
     protected void noteRequestCompletion(ServerStats stats, Object response, Throwable e, long responseTime) {
     	if (stats == null) {
     		return;
@@ -289,9 +334,11 @@ public class LoadBalancerContext implements IClientConfigAware {
     		return;
     	}
         try {
+    	    // 记录响应结果
             recordStats(stats, responseTime);
             RetryHandler callErrorHandler = errorHandler == null ? getRetryHandler() : errorHandler;
             if (callErrorHandler != null && response != null) {
+                // 将某个计数值清零
                 stats.clearSuccessiveConnectionFailureCount();
             } else if (callErrorHandler != null && e != null) {
                 if (callErrorHandler.isCircuitTrippingException(e)) {
@@ -308,7 +355,8 @@ public class LoadBalancerContext implements IClientConfigAware {
 
     /**
      * This is called after an error is thrown from the client
-     * to update related stats.  
+     * to update related stats.
+     * 标记出现了异常
      */
     protected void noteError(ServerStats stats, ClientRequest request, Throwable e, long responseTime) {
     	if (stats == null) {
@@ -319,6 +367,7 @@ public class LoadBalancerContext implements IClientConfigAware {
             RetryHandler errorHandler = getRetryHandler();
             if (errorHandler != null && e != null) {
                 if (errorHandler.isCircuitTrippingException(e)) {
+                    // 增加失败次数
                     stats.incrementSuccessiveConnectionFailureCount();                    
                     stats.addToFailureCount();
                 } else {
@@ -351,6 +400,7 @@ public class LoadBalancerContext implements IClientConfigAware {
 
     /**
      * This is usually called just before client execute a request.
+     * 标记开始请求了 增加 stats 的数值
      */
     public void noteOpenConnection(ServerStats serverStats) {
         if (serverStats == null) {
@@ -370,6 +420,7 @@ public class LoadBalancerContext implements IClientConfigAware {
      * path "/" should return "https" and 443.
      * This method is called by {@link #getServerFromLoadBalancer(java.net.URI, Object)} and
      * {@link #reconstructURIWithServer(Server, java.net.URI)} methods to get the complete executable URI.
+     * 从 url 中解析出 ip 和 port
      */
     protected Pair<String, Integer> deriveSchemeAndPortFromPartialUri(URI uri) {
         boolean isSecure = false;
@@ -401,6 +452,7 @@ public class LoadBalancerContext implements IClientConfigAware {
      * 
      * @param scheme from the vip address. null if not present.
      * @return 80 if scheme is http, 443 if scheme is https, -1 else.
+     * 获取默认端口
      */
     protected int getDefaultPortFromScheme(String scheme) {
         if (scheme == null) {
@@ -451,6 +503,11 @@ public class LoadBalancerContext implements IClientConfigAware {
         return hostAndPort;
     }
 
+    /**
+     * 判断当前 url 是否是vipAddress
+     * @param vipEmbeddedInUri
+     * @return
+     */
     private boolean isVipRecognized(String vipEmbeddedInUri) {
         if (vipEmbeddedInUri == null) {
             return false;
@@ -494,11 +551,13 @@ public class LoadBalancerContext implements IClientConfigAware {
         // Various Supported Cases
         // The loadbalancer to use and the instances it has is based on how it was registered
         // In each of these cases, the client might come in using Full Url or Partial URL
+        // 获取 均衡负载对象
         ILoadBalancer lb = getLoadBalancer();
         if (host == null) {
             // Partial URI or no URI Case
             // well we have to just get the right instances from lb - or we fall back
             if (lb != null){
+                // 通过 选择键 和 均衡负载对象 能否获取到 server 对象
                 Server svc = lb.chooseServer(loadBalancerKey);
                 if (svc == null){
                     throw new ClientException(ClientException.ErrorType.GENERAL,
@@ -518,6 +577,7 @@ public class LoadBalancerContext implements IClientConfigAware {
                 // if we have a vipAddress that came with the registration, we
                 // can use that else we
                 // bail out
+                // 如果没有设置 均衡负载对象
                 if (vipAddresses != null && vipAddresses.contains(",")) {
                     throw new ClientException(
                             ClientException.ErrorType.GENERAL,
@@ -559,6 +619,7 @@ public class LoadBalancerContext implements IClientConfigAware {
             boolean shouldInterpretAsVip = false;
 
             if (lb != null) {
+                // 判断是否应该使用vip
                 shouldInterpretAsVip = isVipRecognized(original.getAuthority());
             }
             if (shouldInterpretAsVip) {
@@ -587,6 +648,7 @@ public class LoadBalancerContext implements IClientConfigAware {
         }
         // just verify that at this point we have a full URL
 
+        // 默认情况下 直接使用 ip port 生成一个server 对象
         return new Server(host, port);
     }
 
@@ -643,6 +705,11 @@ public class LoadBalancerContext implements IClientConfigAware {
         }
     }
 
+    /**
+     * 获取下个server 的重试次数
+     * @param overriddenClientConfig
+     * @return
+     */
     protected int getRetriesNextServer(IClientConfig overriddenClientConfig) {
         int numRetries = maxAutoRetriesNextServer;
         if (overriddenClientConfig != null) {
@@ -651,17 +718,30 @@ public class LoadBalancerContext implements IClientConfigAware {
         return numRetries;
     }
 
+    /**
+     * 获取服务对象对应的统计对象
+     * @param server
+     * @return
+     */
     public final ServerStats getServerStats(Server server) {
         ServerStats serverStats = null;
         ILoadBalancer lb = this.getLoadBalancer();
+        // 获取均衡负载对象
         if (lb instanceof AbstractLoadBalancer){
+            // 获取 负载对象的 统计对象
             LoadBalancerStats lbStats = ((AbstractLoadBalancer) lb).getLoadBalancerStats();
+            // 通过server 定位到 server统计对象
             serverStats = lbStats.getSingleServerStat(server);
         }
         return serverStats;
 
     }
 
+    /**
+     * 获取 同一服务器的 重试次数
+     * @param overriddenClientConfig
+     * @return
+     */
     protected int getNumberRetriesOnSameServer(IClientConfig overriddenClientConfig) {
         int numRetries =  maxAutoRetries;
         if (overriddenClientConfig!=null){
@@ -674,6 +754,14 @@ public class LoadBalancerContext implements IClientConfigAware {
         return numRetries;
     }
 
+    /**
+     * 处理相同服务  这里只是判断 当前次数 是否超过了最大值
+     * @param server
+     * @param currentRetryCount
+     * @param maxRetries
+     * @param e
+     * @return
+     */
     public boolean handleSameServerRetry(Server server, int currentRetryCount, int maxRetries, Throwable e) {
         if (currentRetryCount > maxRetries) {
             return false;

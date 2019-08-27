@@ -32,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * get the shared context between all listeners.
  * 
  * @author Allen Wang
- *
+ * 执行时的上下文对象
  */
 public class ExecutionContext<T> {
 

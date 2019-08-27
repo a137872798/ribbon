@@ -27,7 +27,7 @@ import com.netflix.client.config.IClientConfig;
 /**
  * The class includes an API to create a filter to be use by load balancer
  * to filter the servers returned from {@link #getUpdatedListOfServers()} or {@link #getInitialListOfServers()}.
- *
+ * 一组抽象的 服务列表对象
  */
 public abstract class AbstractServerList<T extends Server> implements ServerList<T>, IClientConfigAware {   
      
@@ -41,6 +41,7 @@ public abstract class AbstractServerList<T extends Server> implements ServerList
     public AbstractServerListFilter<T> getFilterImpl(IClientConfig niwsClientConfig) throws ClientException {
         String niwsServerListFilterClassName = null;
         try {
+            // 创建拦截器对象 默认是  要求zone一致的拦截器
             niwsServerListFilterClassName = niwsClientConfig.get(
                             CommonClientConfigKey.NIWSServerListFilterClassName,
                             ZoneAffinityServerListFilter.class.getName());

@@ -24,7 +24,7 @@ import com.netflix.util.Pair;
  * Host:port identifier
  * 
  * @author stonse
- * 
+ * 代表 一个节点(服务器对象)
  */
 public class Server {
 
@@ -32,38 +32,58 @@ public class Server {
      * Additional meta information of a server, which contains
      * information of the targeting application, as well as server identification
      * specific for a deployment environment, for example, AWS.
+     * 元数据接口
      */
     public static interface MetaInfo {
         /**
          * @return the name of application that runs on this server, null if not available
+         * 代表本 server 是什么app
          */
         public String getAppName();
 
         /**
          * @return the group of the server, for example, auto scaling group ID in AWS.
          * Null if not available
+         * 该server 所在组
          */
         public String getServerGroup();
 
         /**
          * @return A virtual address used by the server to register with discovery service.
          * Null if not available
+         * 该server 在 注册中心的id
          */
         public String getServiceIdForDiscovery();
 
         /**
          * @return ID of the server
+         * 实例id
          */
         public String getInstanceId();
     }
 
+    /**
+     * 该server 所在 的zone
+     */
     public static final String UNKNOWN_ZONE = "UNKNOWN";
+    /**
+     * 该 server 主机
+     */
     private String host;
     private int port = 80;
+    /**
+     * 使用的通信协议
+     */
     private String scheme;
     private volatile String id;
+    /**
+     * 当前是否可用
+     */
     private volatile boolean isAliveFlag;
     private String zone = UNKNOWN_ZONE;
+    /**
+     * 是否可以提供服务
+     */
     private volatile boolean readyToServe = true;
 
     private MetaInfo simpleMetaInfo = new MetaInfo() {
@@ -88,6 +108,11 @@ public class Server {
         }
     };
 
+    /**
+     * 使用给定 ip:port 初始化 服务对象
+     * @param host
+     * @param port
+     */
     public Server(String host, int port) {
         this(null, host, port);
     }
@@ -97,6 +122,7 @@ public class Server {
         this.host = host;
         this.port = port;
         this.id = host + ":" + port;
+        // 初始化时  alive 是 false
         isAliveFlag = false;
     }
 
@@ -124,6 +150,11 @@ public class Server {
         setId(hostPort);
     }
 
+    /**
+     * id 一开始 是特殊格式 转换成了 ip:port 的格式
+     * @param id
+     * @return
+     */
     static public String normalizeId(String id) {
         Pair<String, Integer> hostPort = getHostPort(id);
         if (hostPort == null) {
@@ -132,7 +163,12 @@ public class Server {
             return hostPort.first() + ":" + hostPort.second();
         }
     }
-    
+
+    /**
+     * 从id 信息中提取出 协议
+     * @param id
+     * @return
+     */
     private static String getScheme(String id) {
         if (id != null) {
             if (id.toLowerCase().startsWith("http://")) {
@@ -181,6 +217,10 @@ public class Server {
 
     }
 
+    /**
+     * 从id 中 拆分出 ip port 并设置到属性中
+     * @param id
+     */
     public void setId(String id) {
         Pair<String, Integer> hostPort = getHostPort(id);
         if (hostPort != null) {

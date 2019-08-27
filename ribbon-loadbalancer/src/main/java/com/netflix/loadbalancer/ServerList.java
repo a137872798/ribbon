@@ -24,6 +24,7 @@ import java.util.List;
  * @author stonse
  *
  * @param <T>
+ *     代表一组服务列表
  */
 public interface ServerList<T extends Server> {
 

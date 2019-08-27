@@ -23,7 +23,7 @@ import com.netflix.loadbalancer.Server;
  * Interface that defines operation for priming a connection.
  * 
  * @author awang
- *
+ * 定义主要连接
  */
 public interface IPrimeConnection extends IClientConfigAware {
 
@@ -35,6 +35,7 @@ public interface IPrimeConnection extends IClientConfigAware {
 	 * @param uriPath URI to use in server connection
 	 * @return if the priming is successful
 	 * @throws Exception Any network errors
+	 * 连接到指定server
 	 */
     public boolean connect(Server server, String uriPath) throws Exception;
 

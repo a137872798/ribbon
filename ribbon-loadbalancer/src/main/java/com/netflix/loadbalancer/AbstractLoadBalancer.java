@@ -36,7 +36,7 @@ import java.util.List;
 public abstract class AbstractLoadBalancer implements ILoadBalancer {
 
     /**
-     * 服务状态组 分为 上线中 下线 以及全部
+     * 服务状态组 分为 上线 未上线 以及全部
      */
     public enum ServerGroup{
         ALL,
@@ -46,6 +46,7 @@ public abstract class AbstractLoadBalancer implements ILoadBalancer {
         
     /**
      * delegate to {@link #chooseServer(Object)} with parameter null.
+     * 从一组server中选择单个server
      */
     public Server chooseServer() {
     	return chooseServer(null);
@@ -56,11 +57,13 @@ public abstract class AbstractLoadBalancer implements ILoadBalancer {
      * List of servers that this Loadbalancer knows about
      * 
      * @param serverGroup Servers grouped by status, e.g., {@link ServerGroup#STATUS_UP}
+     *                    通过传入的组别 返回对应的 server 列表
      */
     public abstract List<Server> getServerList(ServerGroup serverGroup);
     
     /**
      * Obtain LoadBalancer related Statistics
+     * 获取均衡负载的统计数据
      */
     public abstract LoadBalancerStats getLoadBalancerStats();    
 }

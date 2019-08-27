@@ -38,20 +38,41 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Capture various stats per Server(node) in the LoadBalancer
  * @author stonse
- *
+ * 服务端的 统计信息
  */
 public class ServerStats {
 
+    /**
+     * 每一分钟 发布一次
+     */
     private static final int DEFAULT_PUBLISH_INTERVAL =  60 * 1000; // = 1 minute
+    /**
+     * 默认每秒最多记录1000个请求
+     */
     private static final int DEFAULT_BUFFER_SIZE = 60 * 1000; // = 1000 requests/sec for 1 minute
 
+    // UnboxedIntProperty 代表 volatile int 类型
+
+    /**
+     * 连接失败的次数
+     */
     private final UnboxedIntProperty connectionFailureThreshold;
+
+    /**
+     * 短路???
+     */
     private final UnboxedIntProperty circuitTrippedTimeoutFactor;
     private final UnboxedIntProperty maxCircuitTrippedTimeout;
     private final UnboxedIntProperty activeRequestsCountTimeout;
 
+    /**
+     * 百分比数组
+     */
     private static final double[] PERCENTS = makePercentValues();
-    
+
+    /**
+     * 统计对象 先不看
+     */
     private DataDistribution dataDist = new DataDistribution(1, PERCENTS); // in case
     private DataPublisher publisher = null;
     private final Distribution responseTimeDist = new Distribution();
@@ -64,9 +85,15 @@ public class ServerStats {
     
     private MeasuredRate serverFailureCounts = new MeasuredRate(failureCountSlidingWindowInterval);
     private MeasuredRate requestCountInWindow = new MeasuredRate(300000L);
-    
+
+    /**
+     * 封装了 ip port 等信息
+     */
     Server server;
-    
+
+    /**
+     * 总的请求数
+     */
     AtomicLong totalRequests = new AtomicLong();
     
     @VisibleForTesting
@@ -77,11 +104,20 @@ public class ServerStats {
 
     @VisibleForTesting
     AtomicInteger openConnectionsCount = new AtomicInteger(0);
-    
+
+    /**
+     * 最后一次连接失败的  时间戳
+     */
     private volatile long lastConnectionFailedTimestamp;
     private volatile long lastActiveRequestsCountChangeTimestamp;
     private AtomicLong totalCircuitBreakerBlackOutPeriod = new AtomicLong(0);
+    /**
+     * 最后一次访问的时间戳
+     */
     private volatile long lastAccessedTimestamp;
+    /**
+     * 第一次连接的时间戳
+     */
     private volatile long firstConnectionTimestamp = 0;
 
     public ServerStats() {
@@ -159,7 +195,12 @@ public class ServerStats {
 
     }
 
+    /**
+     * 获取百分比 数组
+     * @return
+     */
     private static double[] makePercentValues() {
+        // 获取几个固定的百分比
         Percent[] percents = Percent.values();
         double[] p = new double[percents.length];
         for (int i = 0; i < percents.length; i++) {
@@ -224,6 +265,9 @@ public class ServerStats {
         openConnectionsCount.incrementAndGet();
     }
 
+    /**
+     * 减少当前的活跃数
+     */
     public void decrementActiveRequestsCount() {
         activeRequestsCount.getAndUpdate(current -> Math.max(0, current - 1));
         lastActiveRequestsCountChangeTimestamp = System.currentTimeMillis();

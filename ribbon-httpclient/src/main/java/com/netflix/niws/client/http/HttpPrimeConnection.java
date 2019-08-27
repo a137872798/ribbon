@@ -35,12 +35,15 @@ import org.apache.http.params.HttpConnectionParams;
  * An implementation of {@link IPrimeConnection} using Apache HttpClient.
  * 
  * @author awang
- *
+ * 默认connection 实现类
  */
 public class HttpPrimeConnection implements IPrimeConnection {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpPrimeConnection.class);
-    
+
+    /**
+     * 通过该对象发起请求
+     */
     private NFHttpClient client;
     
     public HttpPrimeConnection() {
