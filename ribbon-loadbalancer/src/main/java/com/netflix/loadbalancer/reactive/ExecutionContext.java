@@ -36,13 +36,26 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ExecutionContext<T> {
 
+    /**
+     * 内容信息
+     */
     private final Map<String, Object> context;
     private final ConcurrentHashMap<Object, ChildContext<T>> subContexts;
+    /**
+     * 本次发起的请求对象
+     */
     private final T request;
     private final IClientConfig requestConfig;
+    /**
+     * 重试执行器
+     */
     private final RetryHandler retryHandler;
     private final IClientConfig clientConfig;
 
+    /**
+     * 子上下文
+     * @param <T>
+     */
     private static class ChildContext<T> extends ExecutionContext<T> {
         private final ExecutionContext<T> parent;
 
@@ -76,6 +89,11 @@ public class ExecutionContext<T> {
     }
 
 
+    /**
+     * 根据 key 返回对应的子上下文
+     * @param obj
+     * @return
+     */
     ExecutionContext<T> getChildContext(Object obj) {
         if (subContexts == null) {
             return null;

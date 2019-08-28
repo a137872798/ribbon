@@ -102,7 +102,7 @@ public class RetryRule extends AbstractLoadBalancerRule {
 			InterruptTask task = new InterruptTask(deadline
 					- System.currentTimeMillis());
 
-			//自旋 检测标识是否被设置 未被标识的情况下就不断的自旋
+			//自旋 检测标识是否被设置 未被标识的情况下就不断的自旋 等价于检测 当前时间是否达到 deadline
 			while (!Thread.interrupted()) {
 				answer = subRule.choose(key);
 

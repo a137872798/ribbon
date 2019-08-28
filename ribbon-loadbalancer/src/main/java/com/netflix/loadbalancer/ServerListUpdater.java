@@ -5,6 +5,7 @@ package com.netflix.loadbalancer;
  * of doing dynamic server list updates.
  *
  * @author David Liu
+ * 用于更新服务列表的 接口
  */
 public interface ServerListUpdater {
 

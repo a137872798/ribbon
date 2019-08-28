@@ -9,13 +9,32 @@ import com.netflix.client.config.IClientConfigKey;
 
 import java.util.List;
 
+/**
+ * 均衡负载构建对象
+ * @param <T>
+ */
 public class LoadBalancerBuilder<T extends Server> {
-    
+
+    /**
+     * 生成一个新的 config 对象
+     */
     private IClientConfig config = ClientConfigFactory.findDefaultConfigFactory().newConfig();
+    /**
+     * 设置到 LB 中的 filter
+     */
     private ServerListFilter serverListFilter;
+    /**
+     * rule 对象通过 配合 LB 实现从serverList中 筛选出最优的 server
+     */
     private IRule rule;
     private IPing ping = new DummyPing();
+    /**
+     * 一组服务列表
+     */
     private ServerList serverListImpl;
+    /**
+     * 更新者对象
+     */
     private ServerListUpdater serverListUpdater;
     private IClientConfigAware.Factory factory = ClientFactory::instantiateInstanceWithClientConfig;
     

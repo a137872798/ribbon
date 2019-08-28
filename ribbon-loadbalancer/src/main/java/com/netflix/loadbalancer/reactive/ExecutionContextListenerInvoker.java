@@ -32,11 +32,18 @@ import java.util.concurrent.ConcurrentHashMap;
  * Utility class to invoke the list of {@link ExecutionListener} with {@link ExecutionContext}
  *
  * @author Allen Wang
+ * 用于 执行listener 的 对象
  */
 public class ExecutionContextListenerInvoker<I, O> {
 
     private final static Logger logger = LoggerFactory.getLogger(ExecutionContextListenerInvoker.class);
+    /**
+     * 执行上下文
+     */
     private final ExecutionContext<I> context;
+    /**
+     * 一组监听器对象
+     */
     private final List<ExecutionListener<I, O>> listeners;
     private final IClientConfig clientConfig;
     private final ConcurrentHashMap<String, IClientConfigKey> classConfigKeyMap;
@@ -64,6 +71,9 @@ public class ExecutionContextListenerInvoker<I, O> {
         this(null, listeners);
     }
 
+    /**
+     * 对应到开始的生命周期
+     */
     public void onExecutionStart() {
         onExecutionStart(this.context);
     }
@@ -72,6 +82,7 @@ public class ExecutionContextListenerInvoker<I, O> {
         for (ExecutionListener<I, O> listener : listeners) {
             try {
                 if (!isListenerDisabled(listener)) {
+                    // 获取 监听器对象对应的 上下文
                     listener.onExecutionStart(context.getChildContext(listener));
                 }
             } catch (Throwable e) {
@@ -169,6 +180,11 @@ public class ExecutionContextListenerInvoker<I, O> {
         }
     }
 
+    /**
+     * 判断该监听器能否使用
+     * @param listener
+     * @return
+     */
     private boolean isListenerDisabled(ExecutionListener<?, ?> listener) {
         if (clientConfig == null) {
             return false;
@@ -176,6 +192,7 @@ public class ExecutionContextListenerInvoker<I, O> {
             String className = listener.getClass().getName();
             IClientConfigKey key = classConfigKeyMap.get(className);
             if (key == null) {
+                // 获取 listener 对应的 disable 属性
                 key = CommonClientConfigKey.valueOf("listener." + className + ".disabled");
                 IClientConfigKey old = classConfigKeyMap.putIfAbsent(className, key);
                 if (old != null) {

@@ -24,9 +24,13 @@ import com.netflix.loadbalancer.Server;
  * and is passed to {@link ExecutionListener}
  *
  * @author Allen Wang
+ * 执行时信息
  */
 public class ExecutionInfo {
 
+    /**
+     * 服务对象
+     */
     private final Server server;
     private final int numberOfPastAttemptsOnServer;
     private final int numberOfPastServersAttempted;

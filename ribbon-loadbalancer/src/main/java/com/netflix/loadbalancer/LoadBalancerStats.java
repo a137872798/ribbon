@@ -80,8 +80,14 @@ public class LoadBalancerStats implements IClientConfigAware {
             "niws.loadbalancer.default.circuitTripMaxTimeoutSeconds", 30) {};
 
     private String name;
-    
+
+    /**
+     * 内部维护了 以zone 作为key 的 地区统计对象
+     */
     volatile Map<String, ZoneStats> zoneStatsMap = new ConcurrentHashMap<>();
+    /**
+     * 维护 zone 与 该zone 下的一组server
+     */
     volatile Map<String, List<? extends Server>> upServerListZoneMap = new ConcurrentHashMap<>();
     
     private UnboxedIntProperty connectionFailureThreshold = new UnboxedIntProperty(CONNECTION_FAILURE_COUNT_THRESHOLD.defaultValue());
@@ -92,9 +98,14 @@ public class LoadBalancerStats implements IClientConfigAware {
 
     private UnboxedIntProperty activeRequestsCountTimeout = new UnboxedIntProperty(ACTIVE_REQUESTS_COUNT_TIMEOUT.defaultValue());
 
+    /**
+     * 当首次加载时才会创建
+     */
     private final LoadingCache<Server, ServerStats> serverStatsCache = CacheBuilder.newBuilder()
             .expireAfterAccess(30, TimeUnit.MINUTES)
+            // 设置监听器 当被移除时 将 ServerStats 移除
             .removalListener((RemovalListener<Server, ServerStats>) notification -> notification.getValue().close())
+            // 首次创建统计对象
             .build(new CacheLoader<Server, ServerStats>() {
                 public ServerStats load(Server server) {
                     return createServerStats(server);
@@ -199,7 +210,12 @@ public class LoadBalancerStats implements IClientConfigAware {
         ServerStats ss = getServerStats(server);  
         ss.noteResponseTime(msecs);
     }
-    
+
+    /**
+     * 获取每个服务实例的 统计信息
+     * @param server
+     * @return
+     */
     protected ServerStats getServerStats(Server server) {
         if (server == null) {
             return null;
@@ -224,6 +240,11 @@ public class LoadBalancerStats implements IClientConfigAware {
         ss.decrementActiveRequestsCount();
     }
 
+    /**
+     * 获取 zone 对应的统计对象
+     * @param zone
+     * @return
+     */
     private ZoneStats getZoneStats(String zone) {
         zone = zone.toLowerCase();
         ZoneStats zs = zoneStatsMap.get(zone);
@@ -337,6 +358,7 @@ public class LoadBalancerStats implements IClientConfigAware {
         } else {
             loadPerServer = ((double) activeConnectionsCountOnAvailableServer) / (instanceCount - circuitBreakerTrippedCount);
         }
+        // 生成当前 以 zone 为单位的server 快照信息
         return new ZoneSnapshot(instanceCount, circuitBreakerTrippedCount, activeConnectionsCount, loadPerServer);
     }
     

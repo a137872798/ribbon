@@ -24,7 +24,13 @@ public class PollingServerListUpdater implements ServerListUpdater {
 
     private static final Logger logger = LoggerFactory.getLogger(PollingServerListUpdater.class);
 
+    /**
+     * 服务列表更新时间
+     */
     private static long LISTOFSERVERS_CACHE_UPDATE_DELAY = 1000; // msecs;
+    /**
+     * 重复间隔???
+     */
     private static int LISTOFSERVERS_CACHE_REPEAT_INTERVAL = 30 * 1000; // msecs;
     private static int POOL_SIZE = 2;
 
@@ -46,11 +52,26 @@ public class PollingServerListUpdater implements ServerListUpdater {
         return LazyHolder._serverListRefreshExecutor;
     }
 
+    /**
+     * 当前是否处于活跃状态 也就是 是否有执行任务
+     */
     private final AtomicBoolean isActive = new AtomicBoolean(false);
+    /**
+     * 最后更新时间
+     */
     private volatile long lastUpdated = System.currentTimeMillis();
+    /**
+     * 首次开始的延迟
+     */
     private final long initialDelayMs;
+    /**
+     * 更新服务列表的延迟
+     */
     private final long refreshIntervalMs;
 
+    /**
+     * 更新的结果对象
+     */
     private volatile ScheduledFuture<?> scheduledFuture;
 
     public PollingServerListUpdater() {
@@ -75,7 +96,7 @@ public class PollingServerListUpdater implements ServerListUpdater {
         //CAS 保证只能启动一次
         if (isActive.compareAndSet(false, true)) {
             final Runnable wrapperRunnable = () ->  {
-                //生成一个 用于 执行定时任务的 runnable 对象
+                // 可能是isActive 在 被CAS 处理后 又被 修改为false 那么这时 就要关闭之前开启着的任务
                 if (!isActive.get()) {
                     //如果 定时结果没有关闭 就执行关闭
                     if (scheduledFuture != null) {
@@ -128,6 +149,10 @@ public class PollingServerListUpdater implements ServerListUpdater {
         return System.currentTimeMillis() - lastUpdated;
     }
 
+    /**
+     * 代表经过了几个循环
+     * @return
+     */
     @Override
     public int getNumberMissedCycles() {
         if (!isActive.get()) {
@@ -141,6 +166,11 @@ public class PollingServerListUpdater implements ServerListUpdater {
         return POOL_SIZE;
     }
 
+    /**
+     * 从配置中获取 重复时间间隔
+     * @param clientConfig
+     * @return
+     */
     private static long getRefreshIntervalMs(IClientConfig clientConfig) {
         return clientConfig.get(CommonClientConfigKey.ServerListRefreshInterval, LISTOFSERVERS_CACHE_REPEAT_INTERVAL);
     }

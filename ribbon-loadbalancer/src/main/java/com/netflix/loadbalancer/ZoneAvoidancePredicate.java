@@ -77,7 +77,7 @@ public class ZoneAvoidancePredicate extends AbstractServerPredicate {
     }
 
     /**
-     * 作用谓语条件
+     * 过滤
      * @param input
      * @return
      */

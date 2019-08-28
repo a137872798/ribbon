@@ -21,7 +21,7 @@ package com.netflix.loadbalancer;
  * A utility Ping Implementation that returns whatever its been set to return
  * (alive or dead)
  * @author stonse
- *
+ * 使用一个常量作为每次ping的结果
  */
 public class PingConstant implements IPing {
 		boolean constant = true;

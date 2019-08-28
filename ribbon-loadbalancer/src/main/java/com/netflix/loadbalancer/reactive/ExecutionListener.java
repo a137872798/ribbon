@@ -25,6 +25,7 @@ package com.netflix.loadbalancer.reactive;
  *           request object of the execution
  * @param <O> Output type from the load balancer execution, used by {@link #onExecutionSuccess(ExecutionContext, Object, com.netflix.loadbalancer.reactive.ExecutionInfo)}
  *           API
+ *           执行时的监听器
  */
 public interface ExecutionListener<I, O> {
 
@@ -40,6 +41,8 @@ public interface ExecutionListener<I, O> {
             super(message, cause);
         }
     }
+
+    // 在每个生命周期传入对应的context 对象
 
     /**
      * Called when execution is about to start.

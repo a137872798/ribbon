@@ -69,7 +69,7 @@ import com.netflix.client.config.IClientConfigKey;
  * @deprecated Use {@link WeightedResponseTimeRule}
  * 
  * @see WeightedResponseTimeRule
- * 
+ * 根据响应时间比重来判断调用哪个server
  */
 public class ResponseTimeWeightedRule extends RoundRobinRule {
 
@@ -83,6 +83,7 @@ public class ResponseTimeWeightedRule extends RoundRobinRule {
     
     // holds the accumulated weight from index 0 to current index
     // for example, element at index 2 holds the sum of weight of servers from 0 to 2
+    // 列表中每个元素都是之前元素的总和
     private volatile List<Double> accumulatedWeights = new ArrayList<Double>();
     
 
@@ -90,6 +91,9 @@ public class ResponseTimeWeightedRule extends RoundRobinRule {
 
     protected Timer serverWeightTimer = null;
 
+    /**
+     * 是否正在执行任务
+     */
     protected AtomicBoolean serverWeightAssignmentInProgress = new AtomicBoolean(false);
 
     String name = "unknown";
@@ -111,6 +115,10 @@ public class ResponseTimeWeightedRule extends RoundRobinRule {
         initialize(lb);
     }
 
+    /**
+     * 使用负载对象进行初始化
+     * @param lb
+     */
     void initialize(ILoadBalancer lb) {        
         if (serverWeightTimer != null) {
             serverWeightTimer.cancel();
@@ -121,6 +129,7 @@ public class ResponseTimeWeightedRule extends RoundRobinRule {
                 serverWeightTaskTimerInterval);
         // do a initial run
         ServerWeight sw = new ServerWeight();
+        // 首次直接计算权重
         sw.maintainWeights();
 
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
@@ -166,6 +175,7 @@ public class ResponseTimeWeightedRule extends RoundRobinRule {
             double maxTotalWeight = currentWeights.size() == 0 ? 0 : currentWeights.get(currentWeights.size() - 1); 
             // No server has been hit yet and total weight is not initialized
             // fallback to use round robin
+            // 当每个权重都很低的时候 使用轮询替代
             if (maxTotalWeight < 0.001d) {
                 server =  super.choose(getLoadBalancer(), key); 
             } else {
@@ -201,6 +211,9 @@ public class ResponseTimeWeightedRule extends RoundRobinRule {
         return server;
     }
 
+    /**
+     * 用于计算权重的 定时任务
+     */
     class DynamicServerWeightTask extends TimerTask {
         public void run() {
             ServerWeight serverWeight = new ServerWeight();
@@ -212,8 +225,14 @@ public class ResponseTimeWeightedRule extends RoundRobinRule {
         }
     }
 
+    /**
+     * 服务权重对象
+     */
     class ServerWeight {
 
+        /**
+         * 维持权重
+         */
         public void maintainWeights() {
             ILoadBalancer lb = getLoadBalancer();
             if (lb == null) {
@@ -227,6 +246,7 @@ public class ResponseTimeWeightedRule extends RoundRobinRule {
             try {
                 logger.info("Weight adjusting job started");
                 AbstractLoadBalancer nlb = (AbstractLoadBalancer) lb;
+                // 获取统计对象
                 LoadBalancerStats stats = nlb.getLoadBalancerStats();
                 if (stats == null) {
                     // no statistics, nothing to do
@@ -237,6 +257,7 @@ public class ResponseTimeWeightedRule extends RoundRobinRule {
                 for (Server server : nlb.getAllServers()) {
                     // this will automatically load the stats if not in cache
                     ServerStats ss = stats.getSingleServerStat(server);
+                    // 将所有 server 响应时间求和
                     totalResponseTime += ss.getResponseTimeAvg();
                 }
                 // weight for each server is (sum of responseTime of all servers - responseTime)

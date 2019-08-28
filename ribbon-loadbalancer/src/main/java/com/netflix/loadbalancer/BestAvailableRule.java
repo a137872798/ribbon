@@ -31,14 +31,18 @@ import java.util.List;
  * 
  * @author awang
  *      该规则对象 会先过滤掉失效的 服务 并优先选择请求数最小的那个
+ *      ClientConfigEnabledRoundRobinRule 该对象内部 维护了一个 roundrobin 对象 便于直接使用最基本的 轮询功能
  */
 public class BestAvailableRule extends ClientConfigEnabledRoundRobinRule {
 
+    /**
+     * 获取 均衡负载统计对象
+     */
     private LoadBalancerStats loadBalancerStats;
     
     @Override
     public Server choose(Object key) {
-        //当统计对象不存在的时候 使用父类的 方法
+        //当统计对象不存在的时候 使用父类的 方法 也就是最基本的轮询功能
         if (loadBalancerStats == null) {
             return super.choose(key);
         }

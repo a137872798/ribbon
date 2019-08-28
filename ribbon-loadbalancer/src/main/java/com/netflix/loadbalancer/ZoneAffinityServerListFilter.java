@@ -52,12 +52,30 @@ public class ZoneAffinityServerListFilter<T extends Server> extends
     private static IClientConfigKey<Double> MAX_BLACKOUT_SERVER_PERCENTAGE = new CommonClientConfigKey<Double>("zoneAffinity.maxBlackOutServesrPercentage", 0.8d) {};
     private static IClientConfigKey<Integer> MIN_AVAILABLE_SERVERS = new CommonClientConfigKey<Integer>("zoneAffinity.minAvailableServers", 2) {};
 
+    /**
+     * 是否开启地区亲和
+     */
     private boolean zoneAffinity;
+    /**
+     * 该值如果为 true 就代表开启地区亲和
+     */
     private boolean zoneExclusive;
+    /**
+     * 每个 server 允许的 请求数(并发数)
+     */
     private Property<Double> activeReqeustsPerServerThreshold;
+    /**
+     * 判定是否停用某个 server 的阈值
+     */
     private Property<Double> blackOutServerPercentageThreshold;
+    /**
+     * 服务重新启用的阈值
+     */
     private Property<Integer> availableServersThreshold;
     private Counter overrideCounter;
+    /**
+     * 地区亲和的谓语
+     */
     private ZoneAffinityPredicate zoneAffinityPredicate;
 
     private static Logger logger = LoggerFactory.getLogger(ZoneAffinityServerListFilter.class);
@@ -112,10 +130,13 @@ public class ZoneAffinityServerListFilter<T extends Server> extends
             return zoneAffinity;
         } else {
             logger.debug("Determining if zone affinity should be enabled with given server list: {}", filtered);
-            //获取 区域 快照
+            //获取传入的 server 的信息快照
             ZoneSnapshot snapshot = stats.getZoneSnapshot(filtered);
+            // 获取每个server 的负载情况
             double loadPerServer = snapshot.getLoadPerServer();
-            int instanceCount = snapshot.getInstanceCount();            
+            // 获取实例数量
+            int instanceCount = snapshot.getInstanceCount();
+            // 断路数量
             int circuitBreakerTrippedCount = snapshot.getCircuitTrippedCount();
             //blackOutServerPercentageThreshold 代表 故障百分比
             //activeReqeustsPerServerThreshold 代表 实例平均负载

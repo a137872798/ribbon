@@ -26,6 +26,7 @@ import java.util.List;
  * @author stonse
  * 
  * @param <T>
+ *     服务列表过滤器
  */
 public interface ServerListFilter<T extends Server> {
 

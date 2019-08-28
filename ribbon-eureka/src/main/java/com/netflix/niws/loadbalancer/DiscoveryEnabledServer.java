@@ -26,11 +26,14 @@ import com.netflix.loadbalancer.Server;
  * Servers that were obtained via Discovery and hence contain
  * meta data in the form of InstanceInfo
  * @author stonse
- *      对应到 DiscoveryEnabledNIWSServerList
+ *      对应到 DiscoveryEnabledNIWSServerList  具备自主发现能力的server
  */
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "EQ_DOESNT_OVERRIDE_EQUALS")
 public class DiscoveryEnabledServer extends Server{
 
+    /**
+     * 对应的实例信息 (在eureka中用于记录服务实例信息)
+     */
     private final InstanceInfo instanceInfo;
     private final MetaInfo serviceInfo;
 

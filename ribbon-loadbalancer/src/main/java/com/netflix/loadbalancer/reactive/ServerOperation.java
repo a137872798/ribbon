@@ -26,6 +26,7 @@ import com.netflix.loadbalancer.Server;
  * Provide the {@link rx.Observable} for a specified server. Used by {@link com.netflix.loadbalancer.reactive.LoadBalancerCommand}
  *
  * @param <T> Output type
+ *           代表处理一个server 对象并返回一个 可观察对象
  */
 public interface ServerOperation<T> extends Func1<Server, Observable<T>> {
     /**

@@ -81,6 +81,12 @@ public class ZoneAvoidanceRule extends PredicateBasedRule {
         return map;
     }
 
+    /**
+     * 随机选择一个 zone
+     * @param snapshot
+     * @param chooseFrom
+     * @return
+     */
     static String randomChooseZone(Map<String, ZoneSnapshot> snapshot,
             Set<String> chooseFrom) {
         if (chooseFrom == null || chooseFrom.size() == 0) {
@@ -152,7 +158,6 @@ public class ZoneAvoidanceRule extends PredicateBasedRule {
                     availableZones.remove(zone);
                     limitedZoneAvailability = true;
                 } else {
-                    //故障率超过99%
                     if (Math.abs(loadPerServer - maxLoadPerServer) < 0.000001d) {
                         // they are the same considering double calculation
                         // round error

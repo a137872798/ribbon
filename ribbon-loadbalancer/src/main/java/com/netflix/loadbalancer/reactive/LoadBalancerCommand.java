@@ -56,6 +56,7 @@ import com.netflix.servo.monitor.Stopwatch;
  * </ul>
  *
  * @author Allen Wang
+ * 均衡负载的命令
  */
 public class LoadBalancerCommand<T> {
     private static final Logger logger = LoggerFactory.getLogger(LoadBalancerCommand.class);
@@ -153,7 +154,13 @@ public class LoadBalancerCommand<T> {
         return new Builder<T>();
     }
 
+    /**
+     * 均衡负载的url
+     */
     private final URI    loadBalancerURI;
+    /**
+     * 均衡负载key
+     */
     private final Object loadBalancerKey;
     
     private final LoadBalancerContext loadBalancerContext;
@@ -181,6 +188,7 @@ public class LoadBalancerCommand<T> {
             @Override
             public void call(Subscriber<? super Server> next) {
                 try {
+                    // 通过上下文对象 获取 可执行的server 对象 并传递到下游
                     Server server = loadBalancerContext.getServerFromLoadBalancer(loadBalancerURI, loadBalancerKey);   
                     next.onNext(server);
                     next.onCompleted();
@@ -190,8 +198,14 @@ public class LoadBalancerCommand<T> {
             }
         });
     }
-    
+
+    /**
+     * 执行时上下文对象
+     */
     class ExecutionInfoContext {
+        /**
+         * 服务对象
+         */
         Server      server;
         int         serverAttemptCount = 0;
         int         attemptCount = 0;
@@ -228,15 +242,23 @@ public class LoadBalancerCommand<T> {
         }
 
     }
-    
+
+    /**
+     * 重试策略
+     * @param maxRetrys
+     * @param same
+     * @return
+     */
     private Func2<Integer, Throwable, Boolean> retryPolicy(final int maxRetrys, final boolean same) {
         return new Func2<Integer, Throwable, Boolean>() {
             @Override
             public Boolean call(Integer tryCount, Throwable e) {
+                // 如果时禁止执行的异常不允许进行重试
                 if (e instanceof AbortExecutionException) {
                     return false;
                 }
 
+                // 超过重试次数
                 if (tryCount > maxRetrys) {
                     return false;
                 }
@@ -244,7 +266,8 @@ public class LoadBalancerCommand<T> {
                 if (e.getCause() != null && e instanceof RuntimeException) {
                     e = e.getCause();
                 }
-                
+
+                // 判断是否是 允许重试的异常
                 return retryHandler.isRetriableException(e, same);
             }
         };

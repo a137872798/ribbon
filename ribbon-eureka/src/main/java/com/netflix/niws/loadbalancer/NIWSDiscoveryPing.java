@@ -31,7 +31,7 @@ import com.netflix.loadbalancer.Server;
  * "Ping" Discovery Client
  * i.e. we dont do a real "ping". We just assume that the server is up if Discovery Client says so
  * @author stonse
- *
+ * 具备判断 给定server 能否正常执行的能力
  */
 public class NIWSDiscoveryPing extends AbstractLoadBalancerPing {
 	        
@@ -53,8 +53,14 @@ public class NIWSDiscoveryPing extends AbstractLoadBalancerPing {
 			this.lb = lb;
 		}
 
+	/**
+	 * 判断给定的 server 是否可用
+	 * @param server
+	 * @return
+	 */
 		public boolean isAlive(Server server) {
 		    boolean isAlive = true;
+		    // 如果实例对象是可发现对象
 		    if (server!=null && server instanceof DiscoveryEnabledServer){
 	            DiscoveryEnabledServer dServer = (DiscoveryEnabledServer)server;	            
 	            InstanceInfo instanceInfo = dServer.getInstanceInfo();

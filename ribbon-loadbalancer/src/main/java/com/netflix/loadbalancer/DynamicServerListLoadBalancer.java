@@ -46,17 +46,29 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class DynamicServerListLoadBalancer<T extends Server> extends BaseLoadBalancer {
     private static final Logger LOGGER = LoggerFactory.getLogger(DynamicServerListLoadBalancer.class);
 
+    /**
+     * 是否使用https
+     */
     boolean isSecure = false;
+    /**
+     * 是否开启通道
+     */
     boolean useTunnel = false;
 
-    // to keep track of modification of server lists 列表当前是否属于正常状态
+    // to keep track of modification of server lists
+    /**
+     * 当前列表是否属于更新状态
+     */
     protected AtomicBoolean serverListUpdateInProgress = new AtomicBoolean(false);
 
     /**
-     * 服务实现列表对象 使用易变修饰符 修饰
+     * 服务实现列表对象 使用易变修饰符 修饰 内部包含一个 获取初始化server 和 获取 更新后的 server 的方法
      */
     volatile ServerList<T> serverListImpl;
 
+    /**
+     * 过滤器对象
+     */
     volatile ServerListFilter<T> filter;
 
     /**
@@ -76,7 +88,6 @@ public class DynamicServerListLoadBalancer<T extends Server> extends BaseLoadBal
 
     public DynamicServerListLoadBalancer() {
         //父类构造方法 设置默认的均衡负载规则(roundrobin) 以及 开启一个定时任务 会定时ping 当前的服务列表 并对无效的服务进行下线
-        //todo 还没有看ping具体是如何实现 预测是 访问看结果是否是 404 之类的吧
         super();
     }
 
@@ -103,6 +114,7 @@ public class DynamicServerListLoadBalancer<T extends Server> extends BaseLoadBal
         if (filter instanceof AbstractServerListFilter) {
             ((AbstractServerListFilter) filter).setLoadBalancerStats(getLoadBalancerStats());
         }
+        // 通过配置 初始化一些该类特有的属性
         restOfInit(clientConfig);
     }
 
@@ -116,6 +128,11 @@ public class DynamicServerListLoadBalancer<T extends Server> extends BaseLoadBal
 
     }
 
+    /**
+     * 通过给定的配置进行初始化
+     * @param clientConfig
+     * @param factory
+     */
     @Override
     public void initWithNiwsConfig(IClientConfig clientConfig, Factory factory) {
         try {
@@ -123,9 +140,11 @@ public class DynamicServerListLoadBalancer<T extends Server> extends BaseLoadBal
             String niwsServerListClassName = clientConfig.getOrDefault(CommonClientConfigKey.NIWSServerListClassName);
 
             ServerList<T> niwsServerListImpl = (ServerList<T>) factory.create(niwsServerListClassName, clientConfig);
+            // 默认生成的是 ConfigurationBasedServerList 基于动态配置获取最新的 server
             this.serverListImpl = niwsServerListImpl;
 
             if (niwsServerListImpl instanceof AbstractServerList) {
+                // 默认返回的拦截器是 要求 zone一致
                 AbstractServerListFilter<T> niwsFilter = ((AbstractServerList) niwsServerListImpl)
                         .getFilterImpl(clientConfig);
                 niwsFilter.setLoadBalancerStats(getLoadBalancerStats());
@@ -135,7 +154,7 @@ public class DynamicServerListLoadBalancer<T extends Server> extends BaseLoadBal
             String serverListUpdaterClassName = clientConfig.getOrDefault(
                     CommonClientConfigKey.ServerListUpdaterClassName);
 
-            // 这里通过update 类的名字 来生成对象
+            // 默认的 serverListUpdater 是 PollingServerListUpdater
             this.serverListUpdater = (ServerListUpdater) factory.create(serverListUpdaterClassName, clientConfig);
 
             restOfInit(clientConfig);
@@ -150,11 +169,15 @@ public class DynamicServerListLoadBalancer<T extends Server> extends BaseLoadBal
     void restOfInit(IClientConfig clientConfig) {
         boolean primeConnection = this.isEnablePrimingConnections();
         // turn this off to avoid duplicated asynchronous priming done in BaseLoadBalancer.setServerList()
+        // 这里的 设置只是暂时性的 避免父类 调用了冲突的方法
         this.setEnablePrimingConnections(false);
+        // 使用 ServerUpdater 和 updateAction 进行更新
         enableAndInitLearnNewServersFeature();
 
+        // 更新server 列表
         updateListOfServers();
         if (primeConnection && this.getPrimeConnections() != null) {
+            // primeConnections 会阻塞等待 所有server 连接到对端
             this.getPrimeConnections()
                     .primeConnections(getReachableServers());
         }
@@ -176,7 +199,7 @@ public class DynamicServerListLoadBalancer<T extends Server> extends BaseLoadBal
         for (Server server : serverList) {
             // make sure ServerStats is created to avoid creating them on hot
             // path
-            // 获取每个服务的统计信息
+            // 获取每个服务的统计信息 主要是为了初始化(内部的 缓存容器使用了延迟初始化)
             getLoadBalancerStats().getSingleServerStat(server);
             // 获取每个服务的区域信息
             String zone = server.getZone();
@@ -192,7 +215,7 @@ public class DynamicServerListLoadBalancer<T extends Server> extends BaseLoadBal
                 servers.add(server);
             }
         }
-        //更新映射容器
+        //更新以 zone 为key的映射容器
         setServerListForZones(serversInZones);
     }
 
@@ -268,7 +291,7 @@ public class DynamicServerListLoadBalancer<T extends Server> extends BaseLoadBal
         List<T> servers = new ArrayList<T>();
         //服务列表
         if (serverListImpl != null) {
-            //通过eureka 获取最新的 服务列表
+            //获取最新的服务列表
             servers = serverListImpl.getUpdatedListOfServers();
             LOGGER.debug("List of Servers for {} obtained from Discovery client: {}",
                     getIdentifier(), servers);
@@ -302,7 +325,7 @@ public class DynamicServerListLoadBalancer<T extends Server> extends BaseLoadBal
                 }
                 //将结果设置到 serverList 中
                 setServersList(ls);
-                //强制 ping 目前是 noop
+                //针对每个实例 强制执行 ping
                 super.forceQuickPing();
             } finally {
                 serverListUpdateInProgress.set(false);

@@ -87,6 +87,7 @@ public class RandomRule extends AbstractLoadBalancerRule {
     }
 
     protected int chooseRandomInt(int serverCount) {
+        // current() 是适用于多线程环境的 为每个线程单独维护 seed 提高生成随机数的效率 (Random 内部使用CAS避免多线程获取到相同的seed 但是这样就降低了效率)
         return ThreadLocalRandom.current().nextInt(serverCount);
     }
 

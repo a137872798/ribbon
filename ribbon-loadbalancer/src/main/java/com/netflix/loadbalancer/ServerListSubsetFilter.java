@@ -104,17 +104,16 @@ public class ServerListSubsetFilter<T extends Server> extends ZoneAffinityServer
         //获取 上层过滤后的 结果 这里可能已经经过zone 进行过滤了 也可能没过滤 没过滤的情况是因为zone 中有大量实例是不健康
         List<T> zoneAffinityFiltered = super.getFilteredListOfServers(servers);
         Set<T> candidates = Sets.newHashSet(zoneAffinityFiltered);
-        //默认一开始是空容器  这个应该是每次过滤后 都会将结果保留在容器中
+        //应该是维护了 当前可用的服务实例
         Set<T> newSubSet = Sets.newHashSet(currentSubset);
         //获取 统计对象
         LoadBalancerStats lbStats = getLoadBalancerStats();
         for (T server: currentSubset) {
             // this server is either down or out of service
-            //发现了 下线的 服务就剔除掉
+            //发现了 下线的 服务就剔除掉 (没有包含在currentSubset的就移除掉)
             if (!candidates.contains(server)) {
                 newSubSet.remove(server);
             } else {
-                //这里是 2方服务都存在的情况
                 //获取某个服务的 统计信息 并根据 条件 剔除无效的服务
                 ServerStats stats = lbStats.getSingleServerStat(server);
                 // remove the servers that do not meet health criteria
@@ -127,20 +126,20 @@ public class ServerListSubsetFilter<T extends Server> extends ZoneAffinityServer
                 }
             }
         }
-        //这里是 强制剔除的数量大小
+        //这里是 候选server 的最大长度
         int targetedListSize = sizeProp.getOrDefault();
         //获取本次 被剔除的服务对象
         int numEliminated = currentSubset.size() - newSubSet.size();
         //获取 最小的剔除数量
         int minElimination = (int) (targetedListSize * eliminationPercent.getOrDefault());
+        // 代表被剔除的数量
         int numToForceEliminate = 0;
         if (targetedListSize < newSubSet.size()) {
             // size is shrinking
             numToForceEliminate = newSubSet.size() - targetedListSize;
             //如果最小剔除数 大于 本次被剔除的服务对象
         } else if (minElimination > numEliminated) {
-            //那么多余的服务要被强制剔除
-            numToForceEliminate = minElimination - numEliminated; 
+            numToForceEliminate = minElimination - numEliminated;
         }
         
         if (numToForceEliminate > newSubSet.size()) {
@@ -165,6 +164,7 @@ public class ServerListSubsetFilter<T extends Server> extends ZoneAffinityServer
             if (numToChoose > candidates.size()) {
                 // Not enough healthy instances to choose, fallback to use the
                 // total server pool
+                // 数量不够时 获取之前被 剔除的部分 server
                 candidates = Sets.newHashSet(zoneAffinityFiltered);
                 candidates.removeAll(newSubSet);
             }
@@ -185,6 +185,7 @@ public class ServerListSubsetFilter<T extends Server> extends ZoneAffinityServer
      * @param servers
      * @param toChoose
      * @return
+     * 打乱list
      */
     private List<T> randomChoose(List<T> servers, int toChoose) {
         int size = servers.size();

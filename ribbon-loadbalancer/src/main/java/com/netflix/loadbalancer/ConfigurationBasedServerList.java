@@ -33,7 +33,7 @@ import com.netflix.client.config.IClientConfig;
 }</pre>
  * 
  * @author awang
- * 
+ * 基于配置的 server列表 应该是配合某种动态配置  来 判断哪些服务是新增的
  */
 public class ConfigurationBasedServerList extends AbstractServerList<Server>  {
 
@@ -44,6 +44,10 @@ public class ConfigurationBasedServerList extends AbstractServerList<Server>  {
 	    return getUpdatedListOfServers();
 	}
 
+	/**
+	 * 获取更新的 服务列表
+	 * @return
+	 */
 	@Override
 	public List<Server> getUpdatedListOfServers() {
         String listOfServers = clientConfig.get(CommonClientConfigKey.ListOfServers);

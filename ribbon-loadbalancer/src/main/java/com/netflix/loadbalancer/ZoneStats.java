@@ -29,10 +29,17 @@ import com.netflix.servo.monitor.Monitors;
  * @author awang
  * 
  * @param <T>
+ *     zone 级别的统计对象
  */
 public class ZoneStats<T extends Server> {
 
+    /**
+     * LBStats
+     */
     private final LoadBalancerStats loadBalancerStats;
+    /**
+     * 被统计的 区域
+     */
     private final String zone;
     private static final String PREFIX = "ZoneStats_";
     private final Counter counter;

@@ -631,6 +631,7 @@ public class BaseLoadBalancer extends AbstractLoadBalancer implements
                 }
                 upServerList = allServerList;
             } else if (listChanged) {
+                // 如果列表发生了变化 查看 能否ping通
                 forceQuickPing();
             }
         } finally {
@@ -639,6 +640,11 @@ public class BaseLoadBalancer extends AbstractLoadBalancer implements
     }
 
     /* List in string form. SETS, does not add. */
+
+    /**
+     * 使用拼接的 server字符串来设置 列表
+     * @param srvString
+     */
     void setServers(String srvString) {
         if (srvString != null) {
 
@@ -667,6 +673,7 @@ public class BaseLoadBalancer extends AbstractLoadBalancer implements
      * 
      * @param index
      * @param availableOnly
+     * 通过传入server 下标的方式来获取
      */
     public Server getServerByIndex(int index, boolean availableOnly) {
         try {
@@ -692,6 +699,11 @@ public class BaseLoadBalancer extends AbstractLoadBalancer implements
         return Collections.unmodifiableList(allServerList);
     }
 
+    /**
+     * 通过判断 server 组来获取对应的 server 列表
+     * @param serverGroup Servers grouped by status, e.g., {@link ServerGroup#STATUS_UP}
+     * @return
+     */
     @Override
     public List<Server> getServerList(ServerGroup serverGroup) {
         switch (serverGroup) {
@@ -974,6 +986,11 @@ public class BaseLoadBalancer extends AbstractLoadBalancer implements
         this.primeConnections = primeConnections;
     }
 
+    /**
+     * 连接完成后设置 ready 为true
+     * @param s
+     * @param lastException
+     */
     @Override
     public void primeCompleted(Server s, Throwable lastException) {
         s.setReadyToServe(true);
@@ -991,6 +1008,7 @@ public class BaseLoadBalancer extends AbstractLoadBalancer implements
     public void shutdown() {
         cancelPingTask();
         if (primeConnections != null) {
+            // 关闭线程池对象
             primeConnections.shutdown();
         }
         Monitors.unregisterObject("LoadBalancer_" + name, this);

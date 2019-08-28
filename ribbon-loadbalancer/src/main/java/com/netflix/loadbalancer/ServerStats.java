@@ -136,6 +136,7 @@ public class ServerStats {
     
     /**
      * Initializes the object, starting data collection and reporting.
+     * 通过server 对象进行初始化
      */
     public void initialize(Server server) {
         serverFailureCounts = new MeasuredRate(failureCountSlidingWindowInterval);
@@ -281,10 +282,17 @@ public class ServerStats {
         return getActiveRequestsCount(System.currentTimeMillis());
     }
 
+    /**
+     * 根据当前时间来获取 活跃的请求数
+     * @param currentTime
+     * @return
+     */
     public int getActiveRequestsCount(long currentTime) {
+        // 当前活跃数为0 直接返回
         int count = activeRequestsCount.get();
         if (count == 0) {
             return 0;
+        // 这一段暂时没看懂
         } else if (currentTime - lastActiveRequestsCountChangeTimestamp > activeRequestsCountTimeout.get() * 1000 || count < 0) {
             activeRequestsCount.set(0);
             return 0;            
