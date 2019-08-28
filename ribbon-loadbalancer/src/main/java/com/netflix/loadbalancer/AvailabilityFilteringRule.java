@@ -41,14 +41,18 @@ import com.netflix.servo.annotations.Monitor;
  * <p>
  *   
  * @author awang
- *
+ * 基于可用性 对 List<Server> 进行筛选
  */
-public class AvailabilityFilteringRule extends PredicateBasedRule {    
+public class AvailabilityFilteringRule extends PredicateBasedRule {
 
+    /**
+     * 可用性谓语对象
+     */
     private AbstractServerPredicate predicate;
     
     public AvailabilityFilteringRule() {
     	super();
+    	// 生成可用性谓语对象
         predicate = CompositePredicate.withPredicate(new AvailabilityPredicate(this, null))
                 .addFallbackPredicate(AbstractServerPredicate.alwaysTrue())
                 .build();
@@ -69,6 +73,7 @@ public class AvailabilityFilteringRule extends PredicateBasedRule {
     	if (servers == null) {
     		return 0;
     	}
+    	// predicate.getServerOnlyPredicate() 等价于使用 AvailabilityPredicate.apply
     	return Collections2.filter(servers, predicate.getServerOnlyPredicate()).size();
     }
 
@@ -81,13 +86,17 @@ public class AvailabilityFilteringRule extends PredicateBasedRule {
     @Override
     public Server choose(Object key) {
         int count = 0;
+        // roundrobin 就是轮询所有server 直到获取到一个可用的server 如果10次都没有获取到就返回null
         Server server = roundRobinRule.choose(key);
         while (count++ <= 10) {
+            // 如果是可用的就直接返回
             if (server != null && predicate.apply(new PredicateKey(server))) {
                 return server;
             }
+            // 否则重新获取
             server = roundRobinRule.choose(key);
         }
+        // 当遍历10次后还是没有获取到需要的server
         return super.choose(key);
     }
 

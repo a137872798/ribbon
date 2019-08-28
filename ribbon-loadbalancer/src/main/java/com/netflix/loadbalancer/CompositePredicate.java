@@ -35,16 +35,28 @@ import com.google.common.collect.Lists;
  * exceeds certain number threshold or percentage threshold. 
  * 
  * @author awang
- *
+ * 复合谓语对象
  */
 public class CompositePredicate extends AbstractServerPredicate {
 
+    /**
+     * 代理对象
+     */
     private AbstractServerPredicate delegate;
-    
+
+    /**
+     * 回退对象
+     */
     private List<AbstractServerPredicate> fallbacks = Lists.newArrayList();
-        
+
+    /**
+     * 最低限度的拦截数量
+     */
     private int minimalFilteredServers = 1;
-    
+
+    /**
+     * 最低限度的拦截半分比
+     */
     private float minimalFilteredPercentage = 0;    
     
     @Override
@@ -103,14 +115,15 @@ public class CompositePredicate extends AbstractServerPredicate {
      */
     @Override
     public List<Server> getEligibleServers(List<Server> servers, Object loadBalancerKey) {
-        //获得 过滤后的对象
+        //获得 过滤后的对象 该方法内部会调用本对象的 apply 并进行过滤
         List<Server> result = super.getEligibleServers(servers, loadBalancerKey);
-        //获取 后续的 谓语对象
+        //获取 后备谓语
         Iterator<AbstractServerPredicate> i = fallbacks.iterator();
         //当 处理过的 谓语对象小于指定值 或者 还存在后续的谓语对象 就进行处理
         while (!(result.size() >= minimalFilteredServers && result.size() > (int) (servers.size() * minimalFilteredPercentage))
                 && i.hasNext()) {
             AbstractServerPredicate predicate = i.next();
+            // 经过多轮过滤后返回
             result = predicate.getEligibleServers(servers, loadBalancerKey);
         }
         return result;

@@ -222,17 +222,20 @@ public class ClientFactory {
      *  
      * @param className Class name of the object
      * @param clientConfig IClientConfig object used for initialization.
+     *                     根据className 初始化对象 可以从 config中获取需要的属性
      */
     @SuppressWarnings("unchecked")
 	public static Object instantiateInstanceWithClientConfig(String className, IClientConfig clientConfig) 
     		throws InstantiationException, IllegalAccessException, ClassNotFoundException {
     	Class clazz = Class.forName(className);
+    	// 如果是Aware的实现类 就使用config 进行初始化
     	if (IClientConfigAware.class.isAssignableFrom(clazz)) {
     		IClientConfigAware obj = (IClientConfigAware) clazz.newInstance();
     		obj.initWithNiwsConfig(clientConfig);
     		return obj;
     	} else {
     		try {
+    		    // 尝试使用携带config 的构造函数进行初始化
     		    if (clazz.getConstructor(IClientConfig.class) != null) {
     		    	return clazz.getConstructor(IClientConfig.class).newInstance(clientConfig);
     		    }

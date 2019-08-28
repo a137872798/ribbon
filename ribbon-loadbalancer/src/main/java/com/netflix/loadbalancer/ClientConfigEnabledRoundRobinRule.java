@@ -24,7 +24,7 @@ import com.netflix.client.config.IClientConfig;
  * loadbalancer package
  * 
  * @author stonse
- *      根据客户端配置的规则对象
+ *      根据客户端配置的规则对象  实际上内部就是委托给 roundRobin 进行负载
  */
 public class ClientConfigEnabledRoundRobinRule extends AbstractLoadBalancerRule {
 
@@ -33,6 +33,10 @@ public class ClientConfigEnabledRoundRobinRule extends AbstractLoadBalancerRule 
      */
     RoundRobinRule roundRobinRule = new RoundRobinRule();
 
+    /**
+     * 没有使用新config对象覆写东西 而是直接创建了一个 RoundRobinRule 对象
+     * @param clientConfig
+     */
     @Override
     public void initWithNiwsConfig(IClientConfig clientConfig) {
         roundRobinRule = new RoundRobinRule();

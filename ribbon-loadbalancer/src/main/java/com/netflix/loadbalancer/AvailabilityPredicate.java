@@ -37,6 +37,9 @@ public class AvailabilityPredicate extends  AbstractServerPredicate {
     private static final IClientConfigKey<Boolean> FILTER_CIRCUIT_TRIPPED = new CommonClientConfigKey<Boolean>(
             "niws.loadbalancer.availabilityFilteringRule.filterCircuitTripped", true) {};
 
+    /**
+     * 默认的活跃连接数
+     */
     private static final IClientConfigKey<Integer> DEFAULT_ACTIVE_CONNECTIONS_LIMIT = new CommonClientConfigKey<Integer>(
             "niws.loadbalancer.availabilityFilteringRule.activeConnectionsLimit", -1) {};
 
@@ -79,8 +82,10 @@ public class AvailabilityPredicate extends  AbstractServerPredicate {
      * @return
      */
     private int getActiveConnectionsLimit() {
+        // 先获取 设定值
         Integer limit = activeConnectionsLimit.getOrDefault();
         if (limit == -1) {
+            // 没有的话尝试获取默认值
             limit = defaultActiveConnectionsLimit.getOrDefault();
             if (limit == -1) {
                 limit = Integer.MAX_VALUE;

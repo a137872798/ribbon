@@ -40,8 +40,14 @@ import com.netflix.client.config.IClientConfig;
  *
  */
 public abstract class AbstractServerPredicate implements Predicate<PredicateKey> {
-    
+
+    /**
+     * IRule 封装了获取 loadBalance
+     */
     protected IRule rule;
+    /**
+     * 均衡负载对象
+     */
     private volatile LoadBalancerStats lbStats;
     
     private final Random random = new Random();
@@ -86,6 +92,10 @@ public abstract class AbstractServerPredicate implements Predicate<PredicateKey>
         this.lbStats = lbStats;
     }
 
+    /**
+     * 获取均衡负载统计对象
+     * @return
+     */
     protected LoadBalancerStats getLBStats() {
         if (lbStats != null) {
             return lbStats;
@@ -127,12 +137,15 @@ public abstract class AbstractServerPredicate implements Predicate<PredicateKey>
     }
  
     /**
-     * Get servers filtered by this predicate from list of servers. 
+     * Get servers filtered by this predicate from list of servers.
+     * 使用均衡负载 过滤掉一些server
      */
     public List<Server> getEligibleServers(List<Server> servers, Object loadBalancerKey) {
         if (loadBalancerKey == null) {
+            // 代表只针对 server进行过滤
             return ImmutableList.copyOf(Iterables.filter(servers, this.getServerOnlyPredicate()));            
         } else {
+            // 只保留符合条件的 (包含server 和 loadBalanceKey)
             List<Server> results = Lists.newArrayList();
             for (Server server: servers) {
                 if (this.apply(new PredicateKey(loadBalancerKey, server))) {
@@ -152,7 +165,9 @@ public abstract class AbstractServerPredicate implements Predicate<PredicateKey>
      */
     private int incrementAndGetModulo(int modulo) {
         for (;;) {
+            // 获取当前计数值
             int current = nextIndex.get();
+            // 取模
             int next = (current + 1) % modulo;
             if (nextIndex.compareAndSet(current, next) && current < modulo)
                 return current;
@@ -162,7 +177,7 @@ public abstract class AbstractServerPredicate implements Predicate<PredicateKey>
     /**
      * Choose a random server after the predicate filters a list of servers. Load balancer key 
      * is presumed to be null.
-     *  
+     * 随机获取一个server 对象
      */
     public Optional<Server> chooseRandomlyAfterFiltering(List<Server> servers) {
         List<Server> eligible = getEligibleServers(servers);
@@ -175,6 +190,7 @@ public abstract class AbstractServerPredicate implements Predicate<PredicateKey>
     /**
      * Choose a server in a round robin fashion after the predicate filters a list of servers. Load balancer key 
      * is presumed to be null.
+     * 轮询获取 server
      */
     public Optional<Server> chooseRoundRobinAfterFiltering(List<Server> servers) {
         List<Server> eligible = getEligibleServers(servers);
@@ -187,7 +203,7 @@ public abstract class AbstractServerPredicate implements Predicate<PredicateKey>
     /**
      * Choose a random server after the predicate filters list of servers given list of servers and
      * load balancer key. 
-     *  
+     * 获取随机的server
      */
     public Optional<Server> chooseRandomlyAfterFiltering(List<Server> servers, Object loadBalancerKey) {
         List<Server> eligible = getEligibleServers(servers, loadBalancerKey);
@@ -207,7 +223,9 @@ public abstract class AbstractServerPredicate implements Predicate<PredicateKey>
         }
         return Optional.of(eligible.get(incrementAndGetModulo(eligible.size())));
     }
-        
+
+    // 将普通 谓语对象包装后返回
+
     /**
      * Create an instance from a predicate.
      */

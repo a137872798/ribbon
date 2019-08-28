@@ -23,7 +23,7 @@ package com.netflix.loadbalancer;
  * which might be null. 
  * 
  * @author awang
- *      一个键值对对象 key 是服务对象 value 是均衡负载对象
+ *      维护了 均衡负载使用的key 和 server对象
  */
 public class PredicateKey {
     private Object loadBalancerKey;

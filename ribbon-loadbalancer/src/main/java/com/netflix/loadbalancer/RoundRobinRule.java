@@ -35,10 +35,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class RoundRobinRule extends AbstractLoadBalancerRule {
 
     /**
-     * 应该是用轮询的方式
+     * 便于计算轮询下标
      */
     private AtomicInteger nextServerCyclicCounter;
+    /**
+     * 只轮询可用的 服务
+     */
     private static final boolean AVAILABLE_ONLY_SERVERS = true;
+    /**
+     * 所有服务
+     */
     private static final boolean ALL_SERVERS = false;
 
     private static Logger log = LoggerFactory.getLogger(RoundRobinRule.class);
@@ -79,7 +85,7 @@ public class RoundRobinRule extends AbstractLoadBalancerRule {
                 return null;
             }
 
-            //获取 下标 猜测这里是使用了 取余算法
+            //获取下标  这里没有额外维护可用 server 的列表
             int nextServerIndex = incrementAndGetModulo(serverCount);
             server = allServers.get(nextServerIndex);
 
