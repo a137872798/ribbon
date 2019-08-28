@@ -7,6 +7,7 @@ import javax.inject.Provider;
 
 /**
  * A legacy class to provide eurekaclient via static singletons
+ * 延迟加载 eurekaClient 对象
  */
 class LegacyEurekaClientProvider implements Provider<EurekaClient> {
 
