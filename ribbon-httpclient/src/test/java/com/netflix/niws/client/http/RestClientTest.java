@@ -60,10 +60,14 @@ public class RestClientTest {
 
     @Test
     public void testExecuteWithLB() throws Exception {
+        // 设置config 对象
         ConfigurationManager.getConfigInstance().setProperty("allservices.ribbon." + CommonClientConfigKey.ReadTimeout, "10000");
         ConfigurationManager.getConfigInstance().setProperty("allservices.ribbon." + CommonClientConfigKey.FollowRedirects, "true");
+        // 这里会先生成执行前缀名获取的config 对象 之后 在根据 config 生成 对应的 LB 和client 默认使用的 LB 为ZoneAwareLoadBalancer 但是跟 eureka适配后 应该是 DynamicLoadBalance
+        // 以及对应的 ServerList 也应该是从 eurekaClient  获取  默认情况是从配置文件中获取  LB 中每个需要的类实际上都是从配置文件中获取的
         RestClient client = (RestClient) ClientFactory.getNamedClient("allservices");
         BaseLoadBalancer lb = new BaseLoadBalancer();
+        // 生成一个虚拟的 server 并设置到 lb 中  这样lb 就会在 列表中尝试选择
         Server[] servers = new Server[]{new Server("localhost", server.getServerPort())};
         lb.addServers(Arrays.asList(servers));
         client.setLoadBalancer(lb);
@@ -72,6 +76,7 @@ public class RestClientTest {
         Set<URI> result = new HashSet<URI>();
         HttpRequest request = HttpRequest.newBuilder().uri(new URI("/")).build();
         for (int i = 0; i < 5; i++) {
+            // 使用LB发起请求
             HttpResponse response = client.executeWithLoadBalancer(request);
             assertStatusIsOk(response.getStatus());
             assertTrue(response.isSuccess());
