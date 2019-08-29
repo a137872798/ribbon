@@ -107,7 +107,7 @@ public abstract class ReloadableClientConfig implements IClientConfig {
      * 重新加载属性 (因为属性可能是动态变化的)
      */
     public final void reload() {
-        // 触发 所有 run() 方法
+        // 触发 所有 run() 方法 也就是更新当前配置
         changeActions.values().forEach(Runnable::run);
         // 调用所有动态属性的 reload 方法
         dynamicProperties.values().forEach(ReloadableProperty::reload);
@@ -138,7 +138,7 @@ public abstract class ReloadableClientConfig implements IClientConfig {
     }
 
     /**
-     * 加载执行 client下所有的配置
+     * 加载执行 client下所有的配置  一般先通过namespace 定位到 配置信息 之后通过clientName 知道要查询的是哪些信息
      * @param clientName
      */
     @Override
@@ -152,7 +152,7 @@ public abstract class ReloadableClientConfig implements IClientConfig {
         this.isLoaded = true;
         // 开始加载属性 该方法由子类实现
         loadDefaultValues();
-        // 触发所有的回调方法
+        // 为 resolver 添加一个监听器 当 数据重新加载时(发生变化时) 调用该函数
         resolver.onChange(this::reload);
 
         // 之后打印加载的结果

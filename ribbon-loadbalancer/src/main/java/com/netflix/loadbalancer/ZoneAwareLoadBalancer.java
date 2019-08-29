@@ -138,7 +138,7 @@ public class ZoneAwareLoadBalancer<T extends Server> extends DynamicServerListLo
         // check if there is any zone that no longer has a server
         // and set the list to empty so that the zone related metrics does not
         // contain stale data
-        // 填充 baseLoadBalancer 对象
+        // 更新 负载对象内部的 serverList
         for (Map.Entry<String, BaseLoadBalancer> existingLBEntry: balancers.entrySet()) {
             if (!zoneServersMap.keySet().contains(existingLBEntry.getKey())) {
                 existingLBEntry.getValue().setServersList(Collections.emptyList());

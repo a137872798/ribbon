@@ -179,6 +179,7 @@ public class ZoneAffinityServerListFilter<T extends Server> extends
              *         }
              *     }
              */
+            // 过滤出的结果是  zone 与 谓语对象的zone 一致
             List<T> filteredServers = Lists.newArrayList(Iterables.filter(
                     servers, this.zoneAffinityPredicate.getServerOnlyPredicate()));
             //判断是否要进行区域感知 要的话就返回过滤后的结果 否则返回 原来的 servers

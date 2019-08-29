@@ -300,6 +300,9 @@ public class DefaultClientConfigImpl extends AbstractDefaultClientConfigImpl {
         this.propertyNameSpace = nameSpace;
     }
 
+    /**
+     * 开始加载默认配置  使用resolver 配合 configKey 去加载配置  如果没有成功加载 选择使用备用的默认值
+     */
     public void loadDefaultValues() {
         set(CommonClientConfigKey.MaxHttpConnectionsPerHost, getDefaultMaxHttpConnectionsPerHost());
         set(CommonClientConfigKey.MaxTotalHttpConnections, getDefaultMaxTotalHttpConnections());

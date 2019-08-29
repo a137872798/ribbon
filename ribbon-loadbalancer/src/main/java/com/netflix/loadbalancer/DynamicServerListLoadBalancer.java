@@ -291,7 +291,7 @@ public class DynamicServerListLoadBalancer<T extends Server> extends BaseLoadBal
         List<T> servers = new ArrayList<T>();
         //服务列表
         if (serverListImpl != null) {
-            //获取最新的服务列表
+            //获取最新的服务列表 因为该方法是在 eureka 触发refresh时 调用的 此时 eurekaClient 中保存的 服务列表肯定发生了变化 直接拉取最新列表就好
             servers = serverListImpl.getUpdatedListOfServers();
             LOGGER.debug("List of Servers for {} obtained from Discovery client: {}",
                     getIdentifier(), servers);

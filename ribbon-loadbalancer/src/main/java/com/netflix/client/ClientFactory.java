@@ -36,16 +36,16 @@ import java.util.function.Supplier;
  * the  created instances.
  * 
  * @author awang
- * client 工厂
+ * client工厂 这里产生的 对象
  */
 public class ClientFactory {
 
     /**
-     * client 缓存对象
+     * client 缓存对象  string 是client 的标识  默认情况client 是 "default"  ribbon 在读取配置时的默认前缀也是 clientName.ribbon.xxx
      */
     private static Map<String, IClient<?,?>> simpleClientMap = new ConcurrentHashMap<String, IClient<?,?>>();
     /**
-     * 名字与 均衡负载对象的 映射
+     * clientName与 均衡负载对象的 映射
      */
     private static Map<String, ILoadBalancer> namedLBMap = new ConcurrentHashMap<String, ILoadBalancer>();
     /**
@@ -62,6 +62,7 @@ public class ClientFactory {
      * @param restClientName
      * @param clientConfig
      * @throws ClientException if any errors occurs in the process, or if the client with the same name already exists
+     * 通过 clientName 和 config 对象 构建 client
      */
     public static synchronized IClient<?, ?> registerClientFromProperties(String restClientName, IClientConfig clientConfig) throws ClientException { 
     	IClient<?, ?> client = null;
@@ -72,10 +73,12 @@ public class ClientFactory {
     				"A Rest Client with this name is already registered. Please use a different name");
     	}
     	try {
+    	    // 获取要生成的 client类名 默认是  RestClient
     		String clientClassName = clientConfig.getOrDefault(CommonClientConfigKey.ClientClassName);
     		client = (IClient<?, ?>) instantiateInstanceWithClientConfig(clientClassName, clientConfig);
     		boolean initializeNFLoadBalancer = clientConfig.getOrDefault(CommonClientConfigKey.InitializeNFLoadBalancer);
     		if (initializeNFLoadBalancer) {
+    		    // 代表需要生成均衡负载对象 并保存映射关系
     			loadBalancer = registerNamedLoadBalancerFromclientConfig(restClientName, clientConfig);
     		}
     		if (client instanceof AbstractLoadBalancerAwareClient) {
@@ -100,12 +103,14 @@ public class ClientFactory {
      * Return the named client from map if already created. Otherwise creates the client using the configuration returned by {@link #getNamedConfig(String)}.
      * 
      * @throws RuntimeException if an error occurs in creating the client.
+     * 通过 clientName 初始化具备 均衡负载能力的client 对象
      */
     public static synchronized IClient getNamedClient(String name) {
         if (simpleClientMap.get(name) != null) {
             return simpleClientMap.get(name);
         }
         try {
+            // 创建一个 clientName, client 的映射
             return registerClientFromProperties(name, getNamedConfig(name));
         } catch (ClientException e) {
             throw new RuntimeException("Unable to create client", e);
@@ -266,6 +271,12 @@ public class ClientFactory {
         return getNamedConfig(name, factoryFromConfigType(clientConfigClass));
     }
 
+    /**
+     * 创建 加载指定前缀名的配置对象 并维护映射关系
+     * @param name
+     * @param factory
+     * @return
+     */
     public static IClientConfig getNamedConfig(String name, Supplier<IClientConfig> factory) {
         return namedConfig.computeIfAbsent(name, ignore -> {
             try {

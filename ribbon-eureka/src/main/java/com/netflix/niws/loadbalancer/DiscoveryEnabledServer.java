@@ -26,7 +26,7 @@ import com.netflix.loadbalancer.Server;
  * Servers that were obtained via Discovery and hence contain
  * meta data in the form of InstanceInfo
  * @author stonse
- *      对应到 DiscoveryEnabledNIWSServerList  具备自主发现能力的server
+ *      对应到 DiscoveryEnabledNIWSServerList  具备自主发现能力的server  就是ribbon和 eureka的适配类
  */
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "EQ_DOESNT_OVERRIDE_EQUALS")
 public class DiscoveryEnabledServer extends Server{

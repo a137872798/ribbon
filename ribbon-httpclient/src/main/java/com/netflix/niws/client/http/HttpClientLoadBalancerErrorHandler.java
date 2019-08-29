@@ -17,6 +17,9 @@ import com.netflix.client.DefaultLoadBalancerRetryHandler;
 import com.netflix.client.config.IClientConfig;
 import com.netflix.client.http.HttpResponse;
 
+/**
+ * 针对http 请求异常的 重试处理器
+ */
 public class HttpClientLoadBalancerErrorHandler extends DefaultLoadBalancerRetryHandler {
 
     @SuppressWarnings("unchecked")

@@ -41,6 +41,9 @@ public class EurekaNotificationServerListUpdater implements ServerListUpdater {
         private final DynamicIntProperty poolSizeProp = new DynamicIntProperty(CORE_THREAD, 2);
         private final DynamicIntProperty queueSizeProp = new DynamicIntProperty(QUEUE_SIZE, 1000);
         private final ThreadPoolExecutor defaultServerListUpdateExecutor;
+        /**
+         * 内部包含一个 终止 线程池的方法 作为钩子注册
+         */
         private final Thread shutdownThread;
 
         private LazyHolder() {
@@ -96,11 +99,20 @@ public class EurekaNotificationServerListUpdater implements ServerListUpdater {
     }
 
     /* visible for testing */ final AtomicBoolean updateQueued = new AtomicBoolean(false);
+    /**
+     * 当前是否活跃
+     */
     private final AtomicBoolean isActive = new AtomicBoolean(false);
+    /**
+     * 获取最后一次更新时间
+     */
     private final AtomicLong lastUpdated = new AtomicLong(System.currentTimeMillis());
     private final Provider<EurekaClient> eurekaClientProvider;
     private final ExecutorService refreshExecutor;
 
+    /**
+     * 注册到eurekaClient 的监听器
+     */
     private volatile EurekaEventListener updateListener;
     private volatile EurekaClient eurekaClient;
 

@@ -84,7 +84,7 @@ import com.sun.jersey.client.apache4.config.DefaultApacheHttpClient4Config;
  * @deprecated Please see ribbon-rxnetty module for the Netty based client. 
  *
  * @author awang
- *
+ * 具备均衡负载和 重试能力的 基于 Rest请求的 client
  */
 @Deprecated
 public class RestClient extends AbstractLoadBalancerAwareClient<HttpRequest, HttpResponse> {
@@ -94,6 +94,9 @@ public class RestClient extends AbstractLoadBalancerAwareClient<HttpRequest, Htt
 
 
     private Client restClient;
+    /**
+     * 有关发送请求的逻辑是委托给 HTTPclient 来实现的
+     */
     private HttpClient httpClient4;
     private IClientConfig ncc;
     private String restClientName;

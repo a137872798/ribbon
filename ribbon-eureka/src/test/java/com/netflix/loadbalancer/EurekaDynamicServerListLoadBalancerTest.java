@@ -38,7 +38,13 @@ import java.util.concurrent.TimeUnit;
 @PowerMockIgnore("javax.management.*")
 public class EurekaDynamicServerListLoadBalancerTest {
 
+    /**
+     * 模拟一组服务实例列表
+     */
     private final List<InstanceInfo> servers = InstanceInfoGenerator.newBuilder(10, 1).build().toInstanceList();
+    /**
+     * 初始服务长度
+     */
     private final int initialServerListSize = 4;
     private final int secondServerListSize = servers.size() - initialServerListSize;
     private final String vipAddress = servers.get(0).getVIPAddress();
@@ -65,7 +71,9 @@ public class EurekaDynamicServerListLoadBalancerTest {
             }
         };
 
+        // 加载 需要的client 相关配置 目前从动态配置中心获取
         config = DefaultClientConfigImpl.getClientConfigWithDefaultValues();
+        // 设置 vip地址 和 更新器  使用第二个参数作为默认值
         config.set(CommonClientConfigKey.DeploymentContextBasedVipAddresses, vipAddress);
         config.set(CommonClientConfigKey.ServerListUpdaterClassName, EurekaNotificationServerListUpdater.class.getName());
     }
@@ -78,7 +86,9 @@ public class EurekaDynamicServerListLoadBalancerTest {
 
         DynamicServerListLoadBalancer<DiscoveryEnabledServer> lb = null;
         try {
+            // 可以看作是一个简单的容器
             Capture<EurekaEventListener> eventListenerCapture = new Capture<EurekaEventListener>();
+            // 注册监听器 这样当 eurekaClient 的 服务发生变化时 就会触发监听器
             eurekaClientMock.registerEventListener(EasyMock.capture(eventListenerCapture));
 
             PowerMock.replay(DiscoveryClient.class);
@@ -88,9 +98,13 @@ public class EurekaDynamicServerListLoadBalancerTest {
             // initial creation and loading of the first serverlist
             lb = new DynamicServerListLoadBalancer<DiscoveryEnabledServer>(
                     config,
+                    // 添加一个可用性的过滤器
                     new AvailabilityFilteringRule(),
+                    // 添加一个空的 ping
                     new DummyPing(),
+                    // 添加一个基于eureka服务发现的 动态服务列表
                     new DiscoveryEnabledNIWSServerList(vipAddress, eurekaClientProvider),
+                    // 设置 同一zone 优先的 过滤器
                     new ZoneAffinityServerListFilter<DiscoveryEnabledServer>(),
                     new EurekaNotificationServerListUpdater(eurekaClientProvider)
             );
@@ -174,6 +188,11 @@ public class EurekaDynamicServerListLoadBalancerTest {
         return false;
     }
 
+    /**
+     * 使用一组 服务实例信息 来构建 eurekaClient 对象
+     * @param servers
+     * @return
+     */
     private EurekaClient setUpEurekaClientMock(List<InstanceInfo> servers) {
         final EurekaClient eurekaClientMock = PowerMock.createMock(EurekaClient.class);
 

@@ -110,8 +110,9 @@ public class AvailabilityPredicate extends  AbstractServerPredicate {
     }
     
     private boolean shouldSkipServer(ServerStats stats) {
-        //请求次数大于限定值 获取 触发过断路
+        //开启熔断功能并且 距离上次熔断的时间 短于某个阈值 就代表 本次还属于不可用的范畴内
         if ((circuitBreakerFiltering.getOrDefault() && stats.isCircuitBreakerTripped())
+                // 请求次数过高也会被拒绝
                 || stats.getActiveRequestsCount() >= getActiveConnectionsLimit()) {
             return true;
         }

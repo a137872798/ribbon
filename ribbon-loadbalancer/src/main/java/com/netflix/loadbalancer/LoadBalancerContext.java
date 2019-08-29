@@ -41,7 +41,7 @@ import java.util.concurrent.TimeUnit;
  * A class contains APIs intended to be used be load balancing client which is subclass of this class.
  * 
  * @author awang
- * 均衡负载的 上下文对象
+ * 维护均衡负载相关信息的上下文对象
  */
 public class LoadBalancerContext implements IClientConfigAware {
     private static final Logger logger = LoggerFactory.getLogger(LoadBalancerContext.class);
@@ -338,9 +338,10 @@ public class LoadBalancerContext implements IClientConfigAware {
             recordStats(stats, responseTime);
             RetryHandler callErrorHandler = errorHandler == null ? getRetryHandler() : errorHandler;
             if (callErrorHandler != null && response != null) {
-                // 将某个计数值清零
+                // 清除失败次数
                 stats.clearSuccessiveConnectionFailureCount();
             } else if (callErrorHandler != null && e != null) {
+                // 增加失败次数
                 if (callErrorHandler.isCircuitTrippingException(e)) {
                     stats.incrementSuccessiveConnectionFailureCount();                    
                     stats.addToFailureCount();
@@ -388,6 +389,7 @@ public class LoadBalancerContext implements IClientConfigAware {
     		return;
     	}
         try {
+            // 记录统计信息
             recordStats(stats, responseTime);
             RetryHandler errorHandler = getRetryHandler();
             if (errorHandler != null && response != null) {
@@ -536,6 +538,7 @@ public class LoadBalancerContext implements IClientConfigAware {
      * </ul>
      *
      * @param original Original URI passed from caller
+     *                 通过均衡负载对象 从一组 server 中选择合适的那个
      */
     public Server getServerFromLoadBalancer(@Nullable URI original, @Nullable Object loadBalancerKey) throws ClientException {
         String host = null;

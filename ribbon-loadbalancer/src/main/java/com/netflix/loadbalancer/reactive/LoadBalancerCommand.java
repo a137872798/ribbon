@@ -56,17 +56,35 @@ import com.netflix.servo.monitor.Stopwatch;
  * </ul>
  *
  * @author Allen Wang
- * 均衡负载的命令
+ * 该对象 包含了 本次均衡负载需要的信息 client 对象通过 调用它来与服务器交互
  */
 public class LoadBalancerCommand<T> {
     private static final Logger logger = LoggerFactory.getLogger(LoadBalancerCommand.class);
 
     public static class Builder<T> {
+        /**
+         * 重试处理器
+         */
         private RetryHandler        retryHandler;
+        /**
+         * 均衡负载对象
+         */
         private ILoadBalancer       loadBalancer;
+        /**
+         * 配置对象
+         */
         private IClientConfig       config;
+        /**
+         * 本次均衡负载上下文
+         */
         private LoadBalancerContext loadBalancerContext;
+        /**
+         * 生命周期钩子
+         */
         private List<? extends ExecutionListener<?, T>> listeners;
+        /**
+         * 均衡负载的 key
+         */
         private Object              loadBalancerKey;
         private ExecutionContext<?> executionContext;
         private ExecutionContextListenerInvoker invoker;
@@ -279,10 +297,12 @@ public class LoadBalancerCommand<T> {
      * function and will not be observed by the {@link Observer} subscribed to the returned {@link Observable}. If number of retries has
      * exceeds the maximal allowed, a final error will be emitted by the returned {@link Observable}. Otherwise, the first successful
      * result during execution and retries will be emitted.
+     * 使用传入的 operation 生成一个res 对象
      */
     public Observable<T> submit(final ServerOperation<T> operation) {
         final ExecutionInfoContext context = new ExecutionInfoContext();
-        
+
+        // 执行钩子
         if (listenerInvoker != null) {
             try {
                 listenerInvoker.onExecutionStart();
@@ -291,15 +311,19 @@ public class LoadBalancerCommand<T> {
             }
         }
 
+        // 获取尝试访问同一server 的次数和 下个 server 的次数
         final int maxRetrysSame = retryHandler.getMaxRetriesOnSameServer();
         final int maxRetrysNext = retryHandler.getMaxRetriesOnNextServer();
 
         // Use the load balancer
-        Observable<T> o = 
+        // 生成一个 使用均衡负载 获取 server 并发起请求 返回 res 的observable 对象
+        Observable<T> o =
+                // 默认情况 server 是没有设置的 这里会使用均衡负载对象 生成一个server
                 (server == null ? selectServer() : Observable.just(server))
                 .concatMap(new Func1<Server, Observable<T>>() {
                     @Override
                     // Called for each server being selected
+                    // 使用该函数 将一个 observable 对象变成多个对象
                     public Observable<T> call(Server server) {
                         context.setServer(server);
                         final ServerStats stats = loadBalancerContext.getServerStats(server);
@@ -311,8 +335,10 @@ public class LoadBalancerCommand<T> {
                                     @Override
                                     public Observable<T> call(final Server server) {
                                         context.incAttemptCount();
+                                        // 记录本次请求
                                         loadBalancerContext.noteOpenConnection(stats);
-                                        
+
+                                        // 触发钩子
                                         if (listenerInvoker != null) {
                                             try {
                                                 listenerInvoker.onStartWithServer(context.toExecutionInfo());
@@ -320,9 +346,11 @@ public class LoadBalancerCommand<T> {
                                                 return Observable.error(e);
                                             }
                                         }
-                                        
+
+                                        // 启动停表
                                         final Stopwatch tracer = loadBalancerContext.getExecuteTracer().start();
-                                        
+
+                                        // operation.call(server) 实际上是 调用 client.execute()
                                         return operation.call(server).doOnEach(new Observer<T>() {
                                             private T entity;
                                             @Override
@@ -355,20 +383,24 @@ public class LoadBalancerCommand<T> {
                                         });
                                     }
                                 });
-                        
+
+                        // 如果包含重试次数 会使用同一server 再次发起请求
                         if (maxRetrysSame > 0) 
                             o = o.retry(retryPolicy(maxRetrysSame, true));
                         return o;
                     }
                 });
-            
+
+        // 如果设置了 从其他server 重试 并且server还没有设置
         if (maxRetrysNext > 0 && server == null) 
             o = o.retry(retryPolicy(maxRetrysNext, false));
-        
+
+        // 当遇到异常时
         return o.onErrorResumeNext(new Func1<Throwable, Observable<T>>() {
             @Override
             public Observable<T> call(Throwable e) {
                 if (context.getAttemptCount() > 0) {
+                    // 需要判断该异常是否是 超过了最大重试次数
                     if (maxRetrysNext > 0 && context.getServerAttemptCount() == (maxRetrysNext + 1)) {
                         e = new ClientException(ClientException.ErrorType.NUMBEROF_RETRIES_NEXTSERVER_EXCEEDED,
                                 "Number of retries on next server exceeded max " + maxRetrysNext

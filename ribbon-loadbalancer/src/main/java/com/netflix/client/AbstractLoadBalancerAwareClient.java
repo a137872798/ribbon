@@ -34,7 +34,7 @@ import com.netflix.loadbalancer.reactive.ServerOperation;
  * Abstract class that provides the integration of client with load balancers.
  * 
  * @author awang
- * 具备均衡负载功能的client 对象
+ * 具备均衡负载功能的client 对象  也就是client发起请求时会 选择某一个server 还不确定是否存在重试能力
  *
  */
 public abstract class AbstractLoadBalancerAwareClient<S extends ClientRequest, T extends IResponse> extends LoadBalancerContext implements IClient<S, T>, IClientConfigAware {
@@ -96,6 +96,7 @@ public abstract class AbstractLoadBalancerAwareClient<S extends ClientRequest, T
      * 
      * @param request request to be dispatched to a server chosen by the load balancer. The URI can be a partial
      * URI which does not contain the host name or the protocol.
+     *                使用均衡负载对象 发起请求并返回结果
      */
     public T executeWithLoadBalancer(final S request, final IClientConfig requestConfig) throws ClientException {
         // 构建均衡负载的命令对象 由子类实现
@@ -107,9 +108,11 @@ public abstract class AbstractLoadBalancerAwareClient<S extends ClientRequest, T
                 new ServerOperation<T>() {
                     @Override
                     public Observable<T> call(Server server) {
+                        // 使用server 信息重建一个 url  (改写了 url)
                         URI finalUri = reconstructURIWithServer(server, request.getUri());
                         S requestForServer = (S) request.replaceUri(finalUri);
                         try {
+                            // 发送req 并获取 res
                             return Observable.just(AbstractLoadBalancerAwareClient.this.execute(requestForServer, requestConfig));
                         } 
                         catch (Exception e) {

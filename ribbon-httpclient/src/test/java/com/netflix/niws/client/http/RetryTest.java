@@ -112,8 +112,8 @@ public class RetryTest {
             client.executeWithLoadBalancer(request, 
                     DefaultClientConfigImpl
                     .getEmptyConfig()
-                    .set(CommonClientConfigKey.MaxAutoRetries, 1)
-                    .set(CommonClientConfigKey.MaxAutoRetriesNextServer, 0));
+                    .set(CommonClientConfigKey.MaxAutoRetries, 0)
+                    .set(CommonClientConfigKey.MaxAutoRetriesNextServer, 3));
             fail("Exception expected");
         } catch (ClientException e) { // NOPMD
         }
